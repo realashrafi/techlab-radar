@@ -1,4 +1,3 @@
-"use client";
 
 import React, { useRef, useEffect, useState, useCallback } from "react";
 import { Technology } from "../lib/data";
@@ -16,17 +15,18 @@ interface RadarChartProps {
 }
 
 export function RadarChart({
-                               technologies,
-                               onTechnologyHover,
-                               onTechnologyClick,
-                               selectedTechnology,
-                               hoveredTechnology,
-                               needleEnabled = true,
-                               zoomLevel = 1,
-                               panOffset = { x: 0, y: 0 },
-                               onPanChange,
-                           }: RadarChartProps) {
+                              technologies,
+                              onTechnologyHover,
+                              onTechnologyClick,
+                              selectedTechnology,
+                              hoveredTechnology,
+                              needleEnabled = true,
+                              zoomLevel: externalZoomLevel = 1,
+                              panOffset: externalPanOffset = { x: 0, y: 0 },
+                              onPanChange,
+                          }: RadarChartProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
     const animationRef = useRef<number>(0);
     const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
     const [needleAngle, setNeedleAngle] = useState(150);
@@ -35,11 +35,15 @@ export function RadarChart({
     const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
     const [isHovered, setIsHovered] = useState(false);
     const [modalTech, setModalTech] = useState<Technology | null>(null);
+    const [zoomLevel, setZoomLevel] = useState(externalZoomLevel);
+    const [panOffset, setPanOffset] = useState(externalPanOffset);
+    const [isFullscreen, setIsFullscreen] = useState(false);
+    const [lastPinchDistance, setLastPinchDistance] = useState<number | null>(null);
 
     useEffect(() => {
         const updateDimensions = () => {
-            if (canvasRef.current?.parentElement) {
-                const rect = canvasRef.current.parentElement.getBoundingClientRect();
+            if (containerRef.current) {
+                const rect = containerRef.current.getBoundingClientRect();
                 setDimensions({
                     width: Math.max(rect.width, 300),
                     height: Math.max(rect.height, 300),
@@ -58,9 +62,16 @@ export function RadarChart({
             const increment = 0.5;
             let newAngle = prevAngle + increment;
 
-            if (newAngle >= 390) {
+            let normalizedAngle = newAngle % 360;
+            if (normalizedAngle < 0) normalizedAngle += 360;
+            const isInArc = (normalizedAngle >= 150 && normalizedAngle <= 360) || (normalizedAngle >= 0 && normalizedAngle <= 30);
+
+            if (newAngle >= 390 || !isInArc) {
                 setTrailOpacity(0);
-                setTimeout(() => setTrailOpacity(1), 200);
+                setTimeout(() => {
+                    setTrailOpacity(1);
+                    setNeedleAngle(150);
+                }, 200);
                 return 150;
             }
 
@@ -82,6 +93,125 @@ export function RadarChart({
             if (animationRef.current) cancelAnimationFrame(animationRef.current);
         };
     }, [animateNeedle, needleEnabled, dimensions.width]);
+
+    const handleZoom = useCallback(
+        (delta: number, clientX: number, clientY: number) => {
+            if (!canvasRef.current) return;
+
+            const rect = canvasRef.current.getBoundingClientRect();
+            const mouseX = clientX - rect.left;
+            const mouseY = clientY - rect.top;
+
+            const newZoomLevel = Math.min(Math.max(zoomLevel + delta, 0.5), 3);
+
+            const zoomPointX = (mouseX - panOffset.x) / zoomLevel;
+            const zoomPointY = (mouseY - panOffset.y) / zoomLevel;
+
+            const newPanOffsetX = mouseX - zoomPointX * newZoomLevel;
+            const newPanOffsetY = mouseY - zoomPointY * newZoomLevel;
+
+            setZoomLevel(newZoomLevel);
+            setPanOffset({ x: newPanOffsetX, y: newPanOffsetY });
+            if (onPanChange) {
+                onPanChange({ x: newPanOffsetX, y: newPanOffsetY });
+            }
+        },
+        [zoomLevel, panOffset, onPanChange]
+    );
+
+    const handleWheel = useCallback(
+        (event: WheelEvent) => {
+            if (event.shiftKey) {
+                event.preventDefault();
+                const delta = event.deltaY > 0 ? -0.1 : 0.1;
+                handleZoom(delta, event.clientX, event.clientY);
+            }
+        },
+        [handleZoom]
+    );
+
+    const handleTouchStart = useCallback((event: TouchEvent) => {
+        if (event.touches.length === 2) {
+            event.preventDefault();
+            const touch1 = event.touches[0];
+            const touch2 = event.touches[1];
+            const distance = Math.hypot(
+                touch1.clientX - touch2.clientX,
+                touch1.clientY - touch2.clientY
+            );
+            setLastPinchDistance(distance);
+        }
+    }, []);
+
+    const handleTouchMove = useCallback(
+        (event: TouchEvent) => {
+            if (event.touches.length === 2) {
+                event.preventDefault();
+                const touch1 = event.touches[0];
+                const touch2 = event.touches[1];
+                const distance = Math.hypot(
+                    touch1.clientX - touch2.clientX,
+                    touch1.clientY - touch2.clientY
+                );
+
+                if (lastPinchDistance !== null) {
+                    const delta = (distance - lastPinchDistance) * 0.01;
+                    const centerX = (touch1.clientX + touch2.clientX) / 2;
+                    const centerY = (touch1.clientY + touch2.clientY) / 2;
+                    handleZoom(delta, centerX, centerY);
+                }
+
+                setLastPinchDistance(distance);
+            }
+        },
+        [lastPinchDistance, handleZoom]
+    );
+
+    const handleTouchEnd = useCallback(() => {
+        setLastPinchDistance(null);
+    }, []);
+
+    useEffect(() => {
+        const canvas = canvasRef.current;
+        if (canvas) {
+            canvas.addEventListener("wheel", handleWheel, { passive: false });
+            canvas.addEventListener("touchstart", handleTouchStart, { passive: false });
+            canvas.addEventListener("touchmove", handleTouchMove, { passive: false });
+            canvas.addEventListener("touchend", handleTouchEnd);
+            return () => {
+                canvas.removeEventListener("wheel", handleWheel);
+                canvas.removeEventListener("touchstart", handleTouchStart);
+                canvas.removeEventListener("touchmove", handleTouchMove);
+                canvas.removeEventListener("touchend", handleTouchEnd);
+            };
+        }
+    }, [handleWheel, handleTouchStart, handleTouchMove, handleTouchEnd]);
+
+    const toggleFullscreen = () => {
+        if (!containerRef.current) return;
+
+        if (!isFullscreen) {
+            containerRef.current.requestFullscreen().then(() => setIsFullscreen(true));
+        } else {
+            document.exitFullscreen().then(() => setIsFullscreen(false));
+        }
+    };
+
+    const handleZoomIn = () => {
+        if (!canvasRef.current) return;
+        const rect = canvasRef.current.getBoundingClientRect();
+        const centerX = rect.left + dimensions.width / 2;
+        const centerY = rect.top + dimensions.height / 2;
+        handleZoom(0.1, centerX, centerY);
+    };
+
+    const handleZoomOut = () => {
+        if (!canvasRef.current) return;
+        const rect = canvasRef.current.getBoundingClientRect();
+        const centerX = rect.left + dimensions.width / 2;
+        const centerY = rect.top + dimensions.height / 2;
+        handleZoom(-0.1, centerX, centerY);
+    };
 
     useEffect(() => {
         if (!canvasRef.current || dimensions.width === 0 || dimensions.height === 0) return;
@@ -267,60 +397,64 @@ export function RadarChart({
             ctx.font = `${isSelected || isHovered ? "bold" : "normal"} ${isSelected ? "12px" : isHovered ? "11px" : "10px"} Inter, sans-serif`;
             ctx.fillText(tech.name, labelX, labelY);
 
-            tech.x = (x - panOffset.x) / zoomLevel;
-            tech.y = (y - panOffset.y) / zoomLevel;
+            tech.x = x;
+            tech.y = y;
         });
 
         if (needleEnabled) {
             let normalizedAngle = needleAngle % 360;
             if (normalizedAngle < 0) normalizedAngle += 360;
-            const needleCanvasAngle = (normalizedAngle * Math.PI) / 180;
-            const needleEndX = centerX + Math.cos(needleCanvasAngle) * maxRadius;
-            const needleEndY = centerY + Math.sin(needleCanvasAngle) * maxRadius;
+            const isInArc = (normalizedAngle >= 150 && normalizedAngle <= 360) || (normalizedAngle >= 0 && normalizedAngle <= 30);
 
-            for (let i = 0; i < 20; i++) {
-                const trailProgress = i / 20;
-                const trailAngleOffset = 20 * trailProgress;
-                let trailAngle = needleAngle - trailAngleOffset;
+            if (isInArc && trailOpacity > 0) {
+                const needleCanvasAngle = (normalizedAngle * Math.PI) / 180;
+                const needleEndX = centerX + Math.cos(needleCanvasAngle) * maxRadius;
+                const needleEndY = centerY + Math.sin(needleCanvasAngle) * maxRadius;
 
-                let normalizedTrailAngle = trailAngle % 360;
-                if (normalizedTrailAngle < 0) normalizedTrailAngle += 360;
+                for (let i = 0; i < 20; i++) {
+                    const trailProgress = i / 20;
+                    const trailAngleOffset = 20 * trailProgress;
+                    let trailAngle = needleAngle - trailAngleOffset;
 
-                const isInArc = (normalizedTrailAngle >= 150 && normalizedTrailAngle <= 360) || (normalizedTrailAngle >= 0 && normalizedTrailAngle <= 30);
-                if (!isInArc) continue;
+                    let normalizedTrailAngle = trailAngle % 360;
+                    if (normalizedTrailAngle < 0) normalizedTrailAngle += 360;
 
-                const trailCanvasAngle = (normalizedTrailAngle * Math.PI) / 180;
-                const trailEndX = centerX + Math.cos(trailCanvasAngle) * maxRadius;
-                const trailEndY = centerY + Math.sin(trailCanvasAngle) * maxRadius;
-                const finalOpacity = (1 - trailProgress) * 0.3 * trailOpacity;
+                    const trailIsInArc = (normalizedTrailAngle >= 150 && normalizedTrailAngle <= 360) || (normalizedTrailAngle >= 0 && normalizedTrailAngle <= 30);
+                    if (!trailIsInArc) continue;
 
-                if (finalOpacity > 0.01) {
-                    ctx.beginPath();
-                    ctx.moveTo(centerX, centerY);
-                    ctx.lineTo(trailEndX, trailEndY);
-                    ctx.strokeStyle = `#17A398${Math.round(finalOpacity * 255).toString(16).padStart(2, "0")}`;
-                    ctx.lineWidth = 2;
-                    ctx.stroke();
+                    const trailCanvasAngle = (normalizedTrailAngle * Math.PI) / 180;
+                    const trailEndX = centerX + Math.cos(trailCanvasAngle) * maxRadius;
+                    const trailEndY = centerY + Math.sin(trailCanvasAngle) * maxRadius;
+                    const finalOpacity = (1 - trailProgress) * 0.3 * trailOpacity;
+
+                    if (finalOpacity > 0.01) {
+                        ctx.beginPath();
+                        ctx.moveTo(centerX, centerY);
+                        ctx.lineTo(trailEndX, trailEndY);
+                        ctx.strokeStyle = `#17A398${Math.round(finalOpacity * 255).toString(16).padStart(2, "0")}`;
+                        ctx.lineWidth = 2;
+                        ctx.stroke();
+                    }
                 }
+
+                const needleGradient = ctx.createLinearGradient(centerX, centerY, needleEndX, needleEndY);
+                needleGradient.addColorStop(0, "#17A39899");
+                needleGradient.addColorStop(1, "#17A3981A");
+
+                ctx.shadowBlur = 3;
+                ctx.shadowColor = "#17A398";
+                ctx.globalAlpha = 0.5 * trailOpacity;
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY);
+                ctx.lineTo(needleEndX, needleEndY);
+                ctx.strokeStyle = needleGradient;
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                ctx.shadowBlur = 0;
+                ctx.shadowColor = "transparent";
+                ctx.globalAlpha = 1;
             }
-
-            const needleGradient = ctx.createLinearGradient(centerX, centerY, needleEndX, needleEndY);
-            needleGradient.addColorStop(0, "#17A39899");
-            needleGradient.addColorStop(1, "#17A3981A");
-
-            ctx.shadowBlur = 3;
-            ctx.shadowColor = "#17A398";
-            ctx.globalAlpha = 0.5;
-            ctx.beginPath();
-            ctx.moveTo(centerX, centerY);
-            ctx.lineTo(needleEndX, needleEndY);
-            ctx.strokeStyle = needleGradient;
-            ctx.lineWidth = 2;
-            ctx.stroke();
-
-            ctx.shadowBlur = 0;
-            ctx.shadowColor = "transparent";
-            ctx.globalAlpha = 1;
         }
 
         ctx.restore();
@@ -339,12 +473,12 @@ export function RadarChart({
     const handleCanvasClick = (event: React.MouseEvent<HTMLCanvasElement>) => {
         if (!canvasRef.current) return;
         const rect = canvasRef.current.getBoundingClientRect();
-        const x = event.clientX - rect.left;
-        const y = event.clientY - rect.top;
+        const x = (event.clientX - rect.left - panOffset.x) / zoomLevel;
+        const y = (event.clientY - rect.top - panOffset.y) / zoomLevel;
         const clickedTech = technologies.find((tech) => {
             if (!tech.x || !tech.y) return false;
             const distance = Math.sqrt((x - tech.x) ** 2 + (y - tech.y) ** 2);
-            return distance <= 12;
+            return distance <= 12 / zoomLevel; // Adjust hitbox size based on zoom
         });
         onTechnologyClick(clickedTech || null);
         if (clickedTech) {
@@ -354,10 +488,10 @@ export function RadarChart({
         }
     };
 
-    const closeModal = () => {
+    const closeModal = useCallback(() => {
         console.log("closeModal");
         setModalTech(null);
-    };
+    }, []);
 
     const handleMouseDown = (event: React.MouseEvent<HTMLCanvasElement>) => {
         if (event.button === 0) {
@@ -368,19 +502,21 @@ export function RadarChart({
 
     const handleMouseMove = (event: React.MouseEvent<HTMLCanvasElement>) => {
         if (isDragging && onPanChange) {
-            onPanChange({
+            const newPanOffset = {
                 x: event.clientX - dragStart.x,
                 y: event.clientY - dragStart.y,
-            });
+            };
+            setPanOffset(newPanOffset);
+            onPanChange(newPanOffset);
         }
         if (!canvasRef.current) return;
         const rect = canvasRef.current.getBoundingClientRect();
-        const x = event.clientX - rect.left;
-        const y = event.clientY - rect.top;
+        const x = (event.clientX - rect.left - panOffset.x) / zoomLevel;
+        const y = (event.clientY - rect.top - panOffset.y) / zoomLevel;
         const hoveredTech = technologies.find((tech) => {
             if (!tech.x || !tech.y) return false;
             const distance = Math.sqrt((x - tech.x) ** 2 + (y - tech.y) ** 2);
-            return distance <= 12;
+            return distance <= 12 / zoomLevel;
         });
         onTechnologyHover(hoveredTech || null);
         canvasRef.current.style.cursor = hoveredTech ? "pointer" : isDragging ? "grabbing" : "grab";
@@ -395,7 +531,7 @@ export function RadarChart({
 
     const Modal = ({ tech, onClose }: { tech: Technology; onClose: () => void }) => (
         <div
-            className="fixed inset-0 bg-black/30 backdrop-blur-[2px] bg-opacity-50 flex items-center justify-center !z-[1000]"
+            className="fixed inset-0 bg-black/40 backdrop-blur-[2px] bg-opacity-50 flex items-center justify-center !z-[1000]"
             onClick={() => {
                 console.log("Overlay clicked");
                 onClose();
@@ -435,7 +571,10 @@ export function RadarChart({
     );
 
     return (
-        <div className="w-full h-[70vh] lg:h-[100vh] flex items-center justify-center bg-white rounded-lg relative ">
+        <div
+            ref={containerRef}
+            className="w-full min-h-[90vh] flex items-center justify-center bg-white rounded-lg relative overflow-hidden"
+        >
             <canvas
                 ref={canvasRef}
                 onClick={handleCanvasClick}
@@ -451,6 +590,29 @@ export function RadarChart({
                 <p className="text-xs text-[#2E2E2E]/60 text-center">
                     Distance from center = Implementation timeline • Arc position = Business impact (0-100%)
                 </p>
+            </div>
+            <div className="absolute top-4 right-4 flex space-x-2">
+                <button
+                    onClick={handleZoomIn}
+                    className="bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded"
+                    aria-label="Zoom In"
+                >
+                    +
+                </button>
+                <button
+                    onClick={handleZoomOut}
+                    className="bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded"
+                    aria-label="Zoom Out"
+                >
+                    -
+                </button>
+                <button
+                    onClick={toggleFullscreen}
+                    className="bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded"
+                    aria-label={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
+                >
+                    {isFullscreen ? "🡯" : "🡭"}
+                </button>
             </div>
             {modalTech && <Modal tech={modalTech} onClose={closeModal} />}
         </div>

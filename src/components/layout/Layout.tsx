@@ -6,7 +6,7 @@ function Layout({ children }: { children: React.ReactNode }) {
             <div className={'bg-blue-500 w-full h-20 flex justify-start items-center px-10 text-white'}>
                 Logistics Technology Radar
             </div>
-            {children}
+                {children}
         </div>
     );
 }
