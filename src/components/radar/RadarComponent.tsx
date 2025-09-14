@@ -289,7 +289,7 @@ export function RadarChart({
         );
         impactGradient.addColorStop(0, "#E8F4F8");
         impactGradient.addColorStop(0.5, "#B8D4E3");
-        impactGradient.addColorStop(1, "#17A398");
+        impactGradient.addColorStop(1, "#2b7fff");
 
         ctx.beginPath();
         ctx.arc(centerX, centerY, gradientRingRadius, startAngle, endAngle, false);
@@ -361,14 +361,14 @@ export function RadarChart({
             ctx.arc(x, y, 6 * scale, 0, 2 * Math.PI);
             ctx.fillStyle = "#FFFFFF";
             ctx.fill();
-            ctx.strokeStyle = "#17A398";
+            ctx.strokeStyle = "#2b7fff";
             ctx.lineWidth = 2;
             ctx.stroke();
 
             if (isSelected || isHovered) {
                 ctx.beginPath();
                 ctx.arc(x, y, 12 * scale, 0, 2 * Math.PI);
-                ctx.fillStyle = "#17A398";
+                ctx.fillStyle = "#2b7fff";
                 ctx.globalAlpha = 0.2;
                 ctx.fill();
             }
@@ -387,14 +387,14 @@ export function RadarChart({
             ctx.fillRect(labelX - textWidth / 2 - backgroundPadding, labelY - textHeight / 2 - 1, textWidth + backgroundPadding * 2, textHeight + 2);
 
             if (isSelected || isHovered) {
-                ctx.strokeStyle = isSelected ? "#17A398" : "#B8D4E3";
+                ctx.strokeStyle = isSelected ? "#2b7fff" : "#B8D4E3";
                 ctx.lineWidth = 1;
                 ctx.globalAlpha = 0.5;
                 ctx.strokeRect(labelX - textWidth / 2 - backgroundPadding, labelY - textHeight / 2 - 1, textWidth + backgroundPadding * 2, textHeight + 2);
             }
 
             ctx.globalAlpha = 1;
-            ctx.fillStyle = isSelected ? "#17A398" : isHovered ? "#2E2E2E" : "#2E2E2E";
+            ctx.fillStyle = isSelected ? "#2b7fff" : isHovered ? "#2E2E2E" : "#2E2E2E";
             ctx.font = `${isSelected || isHovered ? "bold" : "normal"} ${isSelected ? "12px" : isHovered ? "11px" : "10px"} Inter, sans-serif`;
             ctx.fillText(tech.name, labelX, labelY);
 
@@ -432,24 +432,24 @@ export function RadarChart({
                         ctx.beginPath();
                         ctx.moveTo(centerX, centerY);
                         ctx.lineTo(trailEndX, trailEndY);
-                        ctx.strokeStyle = `#17A398${Math.round(finalOpacity * 255).toString(16).padStart(2, "0")}`;
+                        ctx.strokeStyle = `#2B7FFF${Math.round(finalOpacity * 255).toString(16).padStart(2, "0")}`;
                         ctx.lineWidth = 2;
                         ctx.stroke();
                     }
                 }
 
                 const needleGradient = ctx.createLinearGradient(centerX, centerY, needleEndX, needleEndY);
-                needleGradient.addColorStop(0, "#17A39899");
-                needleGradient.addColorStop(1, "#17A3981A");
+                needleGradient.addColorStop(0, "#2b7fff");
+                needleGradient.addColorStop(1, "#2b7fff");
 
                 ctx.shadowBlur = 3;
-                ctx.shadowColor = "#17A398";
+                ctx.shadowColor = "#2b7fff";
                 ctx.globalAlpha = 0.5 * trailOpacity;
                 ctx.beginPath();
                 ctx.moveTo(centerX, centerY);
                 ctx.lineTo(needleEndX, needleEndY);
                 ctx.strokeStyle = needleGradient;
-                ctx.lineWidth = 2;
+                ctx.lineWidth = 1;
                 ctx.stroke();
 
                 ctx.shadowBlur = 0;
@@ -587,17 +587,17 @@ export function RadarChart({
                     />
                 </div>
 
-                <div className={'flex flex-col items-start justify-center lg:text-[16px] text-[12px] bg-gray-100 p-3 lg:min-w-50 border border-black/10 rounded-md'}>
-                    <span className={'font-bold'}>Total Technologies</span>
-                    <span>25</span>
+                <div className={'flex flex-col items-start justify-center lg:text-[14px] text-[12px] bg-gray-50 p-3 lg:min-w-68 border border-black/10 rounded-md'}>
+                    <span >Total Technologies</span>
+                    <span className={'font-bold'}>25</span>
                 </div>
-                <div className={'flex flex-col items-start justify-center lg:text-[16px] text-[12px] bg-gray-100 p-3 lg:min-w-50 border border-black/10 rounded-md'}>
-                   <span className={'font-bold'}>High Impact</span>
-                    <span>11</span>
+                <div className={'flex flex-col items-start justify-center lg:text-[14px] text-[12px] bg-gray-50 p-3 lg:min-w-68 border border-black/10 rounded-md'}>
+                   <span >High Impact</span>
+                    <span className={'font-bold'}>11</span>
                 </div>
-                <div className={'flex flex-col items-start justify-center lg:text-[16px] text-[12px] bg-gray-100 p-3 lg:min-w-50 border border-black/10 rounded-md'}>
-                    <span className={'font-bold'}>Near Term</span>
-                    <span>10</span>
+                <div className={'flex flex-col items-start justify-center lg:text-[14px] text-[12px] bg-gray-50 p-3 lg:min-w-68 border border-black/10 rounded-md'}>
+                    <span >Near Term</span>
+                    <span className={'font-bold'}>10</span>
                 </div>
             </div>
             <canvas

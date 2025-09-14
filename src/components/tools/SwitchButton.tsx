@@ -26,7 +26,7 @@ const SwitchButton: React.FC<SwitchButtonProps> = ({ checked = false, onChange, 
                 />
                 <span
                     className={`absolute cursor-pointer top-0 left-0 right-0 bottom-0 bg-gray-400 rounded-full transition-all duration-400 ease-in-out ${
-                        isChecked ? 'bg-green-500' : ''
+                        isChecked ? '!bg-[#F67242]' : ''
                     }`}
                 >
           <span

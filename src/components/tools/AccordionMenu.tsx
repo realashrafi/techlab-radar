@@ -54,7 +54,7 @@ const AccordionMenu: React.FC<AccordionMenuProps> = ({ items, onSelectionChange 
         return (
             <div key={index} className={`mb-2 ${level > 0 ? `ml-${level * 4}` : ''}`}>
                 <div
-                    className={`flex justify-between items-center min-w-50  m-2 p-2 bg-gray-100 border border-gray-300 rounded-md cursor-pointer hover:bg-gray-200 transition-colors ${
+                    className={`flex justify-between items-center min-w-50  m-2 p-2 bg-gray-50 border border-gray-300 rounded-md cursor-pointer hover:bg-gray-200 transition-colors ${
                         hasChildren ? 'has-children max-w-10' : ''
                     } ${isOpen ? 'open' : ''}`}
                     onClick={() => hasChildren && toggleAccordion(index)}
@@ -73,7 +73,7 @@ const AccordionMenu: React.FC<AccordionMenuProps> = ({ items, onSelectionChange 
                     )}
                 </div>
                 {hasChildren && isOpen && (
-                    <div className="ml-4 border-l-2 border-blue-300 ">
+                    <div className="ml-4 border-l-2 border-[#F67242] ">
                         {item.children!.map((child, childIndex) =>
                             renderItem(child, `${index}-${childIndex}`, level + 1)
                         )}
