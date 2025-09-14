@@ -52,7 +52,7 @@ const AccordionMenu: React.FC<AccordionMenuProps> = ({ items, onSelectionChange 
         const isLeaf = !hasChildren; // فقط برای leaf nodes (بدون children) switch رندر کن
 
         return (
-            <div key={index} className={`mb-2 ${level > 0 ? `ml-${level * 4}` : ''}`}>
+            <div key={index} className={`mb-2  ${level > 0 ? `ml-${level * 4}` : ''}`}>
                 <div
                     className={`flex justify-between items-center min-w-50  m-2 p-2 bg-gray-50 border border-gray-300 rounded-md cursor-pointer hover:bg-gray-200 transition-colors ${
                         hasChildren ? 'has-children max-w-10' : ''
@@ -84,7 +84,7 @@ const AccordionMenu: React.FC<AccordionMenuProps> = ({ items, onSelectionChange 
     };
 
     return (
-        <div className="max-w-xs font-sans">
+        <div className="max-w-xs font-sans overflow-y-auto h-[550px] max-h-[550px]">
             {items.map((item, index) => renderItem(item, index.toString()))}
         </div>
     );
