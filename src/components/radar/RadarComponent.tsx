@@ -587,14 +587,17 @@ export function RadarChart({
                     />
                 </div>
 
-                <div className={'flex items-center justify-center bg-gray-100 p-5 rounded'}>
-                    A
+                <div className={'flex flex-col items-start justify-center lg:text-[16px] text-[12px] bg-gray-100 p-3 lg:min-w-50 border border-black/10 rounded-md'}>
+                    <span className={'font-bold'}>Total Technologies</span>
+                    <span>25</span>
                 </div>
-                <div className={'flex items-center justify-center bg-gray-100 p-5 rounded'}>
-                    B
+                <div className={'flex flex-col items-start justify-center lg:text-[16px] text-[12px] bg-gray-100 p-3 lg:min-w-50 border border-black/10 rounded-md'}>
+                   <span className={'font-bold'}>High Impact</span>
+                    <span>11</span>
                 </div>
-                <div className={'flex items-center justify-center bg-gray-100 p-5 rounded'}>
-                    C
+                <div className={'flex flex-col items-start justify-center lg:text-[16px] text-[12px] bg-gray-100 p-3 lg:min-w-50 border border-black/10 rounded-md'}>
+                    <span className={'font-bold'}>Near Term</span>
+                    <span>10</span>
                 </div>
             </div>
             <canvas

@@ -69,11 +69,11 @@ const AccordionMenu: React.FC<AccordionMenuProps> = ({ items, onSelectionChange 
                         )}
                     </div>
                     {hasChildren && (
-                        <span className="text-lg font-bold ">{isOpen ? '−' : '+'}</span>
+                        <span>{isOpen ? '🡭' : '🡯'}</span>
                     )}
                 </div>
                 {hasChildren && isOpen && (
-                    <div className="ml-4 border-l-2 border-blue-300 pl-2">
+                    <div className="ml-4 border-l-2 border-blue-300 ">
                         {item.children!.map((child, childIndex) =>
                             renderItem(child, `${index}-${childIndex}`, level + 1)
                         )}
