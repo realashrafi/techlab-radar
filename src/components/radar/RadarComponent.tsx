@@ -573,8 +573,20 @@ export function RadarChart({
     return (
         <div
             ref={containerRef}
-            className="w-full min-h-[90vh] flex items-center justify-center bg-white rounded-lg relative overflow-hidden"
+            className="w-full min-h-[90vh] flex flex-col items-center justify-center bg-white rounded-lg relative overflow-hidden"
         >
+            <div className={`relative flex items-center justify-between gap-4  ${isFullscreen ? 'mt-28':'mt-8'} transition-all`}>
+
+                <div className={'flex items-center justify-center bg-gray-100 p-5 rounded'}>
+                    A
+                </div>
+                <div className={'flex items-center justify-center bg-gray-100 p-5 rounded'}>
+                    B
+                </div>
+                <div className={'flex items-center justify-center bg-gray-100 p-5 rounded'}>
+                    C
+                </div>
+            </div>
             <canvas
                 ref={canvasRef}
                 onClick={handleCanvasClick}
@@ -583,7 +595,7 @@ export function RadarChart({
                 onMouseLeave={handleMouseLeave}
                 onMouseDown={handleMouseDown}
                 onMouseUp={handleMouseUp}
-                className="w-full h-full"
+                className="w-full h-full transition-all"
                 style={{ width: dimensions.width, height: dimensions.height }}
             />
             <div className="absolute bottom-36 left-1/2 transform -translate-x-1/2">
