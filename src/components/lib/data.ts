@@ -17,40 +17,222 @@ export interface Technology {
 }
 export const menuItems = [
     {
-        key: 'parent1',
-        title: 'والد ۱',
-        checked: false, // checked اولیه
-        children: [
+        "key": "tech_categories",
+        "title": "Tech Categories",
+        "checked": false,
+        "children": [
             {
-                key: 'child1-1',
-                title: 'فرزند ۱-۱',
-                checked: false
+                "key": "tech_categories_1",
+                "title": "AI",
+                "checked": false
             },
             {
-                key: 'child1-2',
-                title: 'فرزند ۱-۲',
-                checked:false,
-            },
-        ],
-    },{
-        key: 'parent2',
-        title: 'والد2',
-        checked: false, // checked اولیه
-        children: [
-            {
-                key: 'child2-1',
-                title: 'فرزند ۱-۱',
-                checked: false
+                "key": "tech_categories_2",
+                "title": "Data & Analytics",
+                "checked": false
             },
             {
-                key: 'child2-2',
-                title: 'فرزند ۱-۲',
-                checked:false,
+                "key": "tech_categories_3",
+                "title": "IoT & Sensing",
+                "checked": false
             },
-        ],
+            {
+                "key": "tech_categories_4",
+                "title": "Next Generation Packaging",
+                "checked": false
+            },
+            {
+                "key": "tech_categories_5",
+                "title": "Automation & Robotics",
+                "checked": false
+            },
+            {
+                "key": "tech_categories_6",
+                "title": "Digital Infrastructure & Connectivity",
+                "checked": false
+            },
+            {
+                "key": "tech_categories_7",
+                "title": "IOT",
+                "checked": false
+            },
+            {
+                "key": "tech_categories_8",
+                "title": "Blockchain & Security",
+                "checked": false
+            },
+            {
+                "key": "tech_categories_9",
+                "title": "Mixed Reality (AR/VR/MR)",
+                "checked": false
+            },
+            {
+                "key": "tech_categories_10",
+                "title": "Energy & Sustainability",
+                "checked": false
+            },
+            {
+                "key": "tech_categories_11",
+                "title": "Autonomous Transport & Delivery",
+                "checked": false
+            }
+        ]
     },
-
+    {
+        "key": "departments",
+        "title": "Departments",
+        "checked": false,
+        "children": [
+            {
+                "key": "departments_1",
+                "title": "Customer Service",
+                "checked": false
+            },
+            {
+                "key": "departments_2",
+                "title": "Transportation",
+                "checked": false
+            },
+            {
+                "key": "departments_3",
+                "title": "IT Support",
+                "checked": false
+            },
+            {
+                "key": "departments_4",
+                "title": "Warehouse Operations",
+                "checked": false
+            }
+        ]
+    },
+    {
+        "key": "supply_chain_stage",
+        "title": "Supply Chain Stage",
+        "checked": false,
+        "children": [
+            {
+                "key": "supply_chain_stage_1",
+                "title": "First‑Mile Logistics",
+                "checked": false
+            },
+            {
+                "key": "supply_chain_stage_2",
+                "title": "Last‑Mile Logistics",
+                "checked": false
+            },
+            {
+                "key": "supply_chain_stage_3",
+                "title": "Mid‑Mile Logistics",
+                "checked": false
+            }
+        ]
+    },
+    {
+        "key": "trade_channel_type",
+        "title": "Trade Channel Type",
+        "checked": false,
+        "children": [
+            {
+                "key": "trade_channel_type_1",
+                "title": "Electronic Commerce (E‑commerce)",
+                "checked": false
+            },
+            {
+                "key": "trade_channel_type_2",
+                "title": "Mobile Commerce (M‑commerce)",
+                "checked": false
+            },
+            {
+                "key": "trade_channel_type_3",
+                "title": "Social Commerce",
+                "checked": false
+            },
+            {
+                "key": "trade_channel_type_4",
+                "title": "Fast Commerce",
+                "checked": false
+            },
+            {
+                "key": "trade_channel_type_5",
+                "title": "Marketplaces",
+                "checked": false
+            },
+            {
+                "key": "trade_channel_type_6",
+                "title": "Subscription / Service",
+                "checked": false
+            },
+            {
+                "key": "trade_channel_type_7",
+                "title": "Direct‑to‑Consumer (D2C) Model",
+                "checked": false
+            },
+            {
+                "key": "trade_channel_type_8",
+                "title": "Omni‑channel Commerce",
+                "checked": false
+            },
+            {
+                "key": "trade_channel_type_9",
+                "title": "Traditional Commerce (Offline)",
+                "checked": false
+            }
+        ]
+    },
+    {
+        "key": "industry",
+        "title": "Industry",
+        "checked": false,
+        "children": [
+            {
+                "key": "industry_1",
+                "title": "\"Retail – Online & Offline\"",
+                "checked": false
+            },
+            {
+                "key": "industry_2",
+                "title": "\"Healthcare",
+                "checked": false
+            },
+            {
+                "key": "industry_3",
+                "title": "Pharma & Care\"",
+                "checked": false
+            },
+            {
+                "key": "industry_4",
+                "title": "\"Food & Beverage\"",
+                "checked": false
+            },
+            {
+                "key": "industry_5",
+                "title": "\"Mobility",
+                "checked": false
+            },
+            {
+                "key": "industry_6",
+                "title": "Smart City & Logistics Infra\"",
+                "checked": false
+            },
+            {
+                "key": "industry_7",
+                "title": "\"Agriculture & Agro-Supply Chain\"",
+                "checked": false
+            },
+            {
+                "key": "industry_8",
+                "title": "\"Energy & Infrastructure\"",
+                "checked": false
+            },
+            {
+                "key": "industry_9",
+                "title": "\"Manufacturing & Industrial Goods\"",
+                "checked": false
+            }
+        ]
+    }
 ];
+
 export interface FilterState {
     sectors: string[]
     trendClusters: string[]

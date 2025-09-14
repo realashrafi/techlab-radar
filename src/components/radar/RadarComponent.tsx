@@ -226,250 +226,357 @@ export function RadarChart({
         canvas.height = dimensions.height * dpr;
         ctx.scale(dpr, dpr);
 
-        const centerX = dimensions.width / 2;
-        const centerY = dimensions.height / 2;
-        const maxRadius = Math.min(dimensions.width / 2 - 50, dimensions.height / 2 - 50);
+        // لود تصویر پس‌زمینه
+        const backgroundImage = new Image();
+        backgroundImage.src = "/iran.jpg"; // مسیر تصویر رو درست کن
 
-        if (maxRadius <= 0) return;
+        // تابع رندر رادار (بدون needle)
+        const renderRadar = () => {
+            ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr); // پاکسازی canvas
 
-        ctx.save();
-        ctx.translate(panOffset.x, panOffset.y);
-        ctx.scale(zoomLevel, zoomLevel);
+            ctx.save();
+            ctx.translate(panOffset.x, panOffset.y);
+            ctx.scale(zoomLevel, zoomLevel);
 
-        const startAngle = (150 * Math.PI) / 180;
-        const endAngle = (30 * Math.PI) / 180;
-        const fourYearRadius = maxRadius * 0.4;
+            const centerX = dimensions.width / 2;
+            const centerY = dimensions.height / 2;
+            const maxRadius = Math.min(dimensions.width / 2 - 50, dimensions.height / 2 - 50);
+            const startAngle = (150 * Math.PI) / 180;
+            const endAngle = (30 * Math.PI) / 180;
+            const fourYearRadius = maxRadius * 0.4;
 
-        const innerGradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, fourYearRadius);
-        innerGradient.addColorStop(0, "#D0D8E233");
-        innerGradient.addColorStop(1, "#A0A8B233");
-
-        ctx.beginPath();
-        ctx.arc(centerX, centerY, fourYearRadius, startAngle, endAngle, false);
-        ctx.arc(centerX, centerY, 0, endAngle, startAngle, true);
-        ctx.closePath();
-        ctx.fillStyle = innerGradient;
-        ctx.fill();
-
-        const outerGradient = ctx.createRadialGradient(centerX, centerY, fourYearRadius, centerX, centerY, maxRadius);
-        outerGradient.addColorStop(0, "#F0F4F826");
-        outerGradient.addColorStop(1, "#C0C8D226");
-
-        ctx.beginPath();
-        ctx.arc(centerX, centerY, maxRadius, startAngle, endAngle, false);
-        ctx.arc(centerX, centerY, fourYearRadius, endAngle, startAngle, true);
-        ctx.closePath();
-        ctx.fillStyle = outerGradient;
-        ctx.fill();
-
-        const divisions = 10;
-        const angleStep = 24;
-        ctx.strokeStyle = "#E5E7EB";
-        ctx.lineWidth = 1;
-        ctx.globalAlpha = 0.3;
-
-        for (let i = 0; i <= divisions; i++) {
-            const radarAngle = 150 + i * angleStep;
-            const canvasAngle = (radarAngle * Math.PI) / 180;
-            const x = centerX + Math.cos(canvasAngle) * maxRadius;
-            const y = centerY + Math.sin(canvasAngle) * maxRadius;
-            ctx.beginPath();
-            ctx.moveTo(centerX, centerY);
-            ctx.lineTo(x, y);
-            ctx.stroke();
-        }
-
-        const gradientRingRadius = maxRadius + 20;
-        const gradientRingWidth = 12;
-        const impactGradient = ctx.createLinearGradient(
-            centerX + Math.cos(startAngle) * gradientRingRadius,
-            centerY + Math.sin(startAngle) * gradientRingRadius,
-            centerX + Math.cos(endAngle) * gradientRingRadius,
-            centerY + Math.sin(endAngle) * gradientRingRadius
-        );
-        impactGradient.addColorStop(0, "#E8F4F8");
-        impactGradient.addColorStop(0.5, "#B8D4E3");
-        impactGradient.addColorStop(1, "#2b7fff");
-
-        ctx.beginPath();
-        ctx.arc(centerX, centerY, gradientRingRadius, startAngle, endAngle, false);
-        ctx.arc(centerX, centerY, gradientRingRadius - gradientRingWidth, endAngle, startAngle, true);
-        ctx.closePath();
-        ctx.fillStyle = impactGradient;
-        ctx.globalAlpha = 0.8;
-        ctx.fill();
-
-        ctx.beginPath();
-        ctx.arc(centerX, centerY, gradientRingRadius, startAngle, endAngle, false);
-        ctx.strokeStyle = "#D1D5DB";
-        ctx.lineWidth = 1;
-        ctx.globalAlpha = 0.4;
-        ctx.stroke();
-
-        const rings = [
-            {years: 2, radius: maxRadius * 0.2, color: "#A0A8B2"},
-            {years: 4, radius: maxRadius * 0.4, color: "#B0BAC5"},
-            {years: 6, radius: maxRadius * 0.6, color: "#C0CAD8"},
-            {years: 8, radius: maxRadius * 0.8, color: "#D0DCEB"},
-            {years: 10, radius: maxRadius, color: "#E0EDEF"},
-        ];
-
-        rings.forEach((ring) => {
-            ctx.beginPath();
-            ctx.arc(centerX, centerY, ring.radius, startAngle, endAngle, false);
-            ctx.strokeStyle = ring.color;
-            ctx.lineWidth = 0.5;
-            ctx.stroke();
-            ctx.fillStyle = "#2E2E2E";
-            ctx.globalAlpha = 0.8;
-            ctx.font = "10px Inter, sans-serif";
-            ctx.textAlign = "center";
-            ctx.fillText(`${ring.years}yr`, centerX, centerY - ring.radius - 8);
-        });
-
-        ctx.fillStyle = "#2E2E2E";
-        ctx.globalAlpha = 0.7;
-        ctx.font = "12px Inter, sans-serif";
-        ctx.fillText("0% Impact", centerX + Math.cos(startAngle) * (maxRadius + 35), centerY + Math.sin(startAngle) * (maxRadius + 35) + 15);
-        ctx.fillText("100% Impact", centerX + Math.cos(endAngle) * (maxRadius + 35), centerY + Math.sin(endAngle) * (maxRadius + 35) + 15);
-
-        const arcSpan = 240;
-        const startRadarAngle = 150;
-
-        technologies.forEach((tech, index) => {
-            const impactAngle = startRadarAngle + (tech.impact / 100) * arcSpan;
-            let radarAngle = impactAngle;
-
-            if (radarAngle >= 360) {
-                radarAngle -= 360;
-            }
-
-            const canvasAngle = (radarAngle * Math.PI) / 180;
-            const normalizedTimeline = Math.min(tech.timeline / 10, 1);
-            const radius = normalizedTimeline * maxRadius;
-
-            const x = centerX + Math.cos(canvasAngle) * radius;
-            const y = centerY + Math.sin(canvasAngle) * radius;
-
-            const isSelected = selectedTechnology?.id === tech.id;
-            const isHovered = hoveredTechnology?.id === tech.id;
-            const scale = isSelected ? 1.5 : isHovered ? 1.2 : 1;
-            const alpha = isSelected || isHovered ? 1 : 0.9;
-
-            ctx.globalAlpha = alpha;
-            ctx.beginPath();
-            ctx.arc(x, y, 6 * scale, 0, 2 * Math.PI);
-            ctx.fillStyle = "#FFFFFF";
-            ctx.fill();
-            ctx.strokeStyle = "#2b7fff";
-            ctx.lineWidth = 2;
-            ctx.stroke();
-
-            if (isSelected || isHovered) {
+            // رسم تصویر پس‌زمینه فقط در ناحیه رادار با گرادیانت محو
+            if (backgroundImage.complete && backgroundImage.naturalWidth !== 0) {
+                ctx.save();
+                // ایجاد کلیپ برای ناحیه کمانی رادار
                 ctx.beginPath();
-                ctx.arc(x, y, 12 * scale, 0, 2 * Math.PI);
-                ctx.fillStyle = "#2b7fff";
+                ctx.arc(centerX, centerY, maxRadius, startAngle, endAngle, false);
+                ctx.arc(centerX, centerY, fourYearRadius, endAngle, startAngle, true);
+                ctx.closePath();
+                ctx.clip();
+
+                // رسم تصویر با در نظر گرفتن زوم
                 ctx.globalAlpha = 0.2;
+                ctx.drawImage(
+                    backgroundImage,
+                    (centerX - dimensions.width / 2) / zoomLevel,
+                    (centerY - dimensions.height / 2) / zoomLevel,
+                    dimensions.width / zoomLevel,
+                    dimensions.height / zoomLevel
+                );
+
+                // ایجاد گرادیانت شعاعی برای محو کردن (برعکس: مرکز شفاف، لبه‌ها مات)
+                const fadeGradient = ctx.createRadialGradient(
+                    centerX,
+                    centerY,
+                    fourYearRadius,
+                    centerX,
+                    centerY,
+                    maxRadius
+                );
+                fadeGradient.addColorStop(0, "rgba(255, 255, 255, 0)"); // مرکز شفاف
+                fadeGradient.addColorStop(0.7, "rgba(255, 255, 255, 0.8)");
+                fadeGradient.addColorStop(1, "rgba(255, 255, 255, 1)"); // لبه‌ها مات
+
+                ctx.globalAlpha = 1;
+                ctx.fillStyle = fadeGradient;
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, maxRadius, startAngle, endAngle, false);
+                ctx.arc(centerX, centerY, fourYearRadius, endAngle, startAngle, true);
+                ctx.closePath();
                 ctx.fill();
+
+                ctx.restore();
             }
 
-            const labelOffset = 15 * scale;
-            const labelX = x + Math.cos(canvasAngle) * labelOffset;
-            const labelY = y + Math.sin(canvasAngle) * labelOffset;
-            const textMetrics = ctx.measureText(tech.name);
-            const textWidth = textMetrics.width;
-            const textHeight = isSelected ? 14 : isHovered ? 13 : 12;
-            const backgroundAlpha = isSelected ? 0.9 : isHovered ? 0.85 : 0.7;
-            const backgroundPadding = isSelected || isHovered ? 3 : 2;
+            // رندر بخش‌های اصلی رادار
+            const innerGradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, fourYearRadius);
+            innerGradient.addColorStop(0, "#D0D8E233");
+            innerGradient.addColorStop(1, "#A0A8B233");
 
-            ctx.globalAlpha = backgroundAlpha;
-            ctx.fillStyle = "#FFFFFF";
-            ctx.fillRect(labelX - textWidth / 2 - backgroundPadding, labelY - textHeight / 2 - 1, textWidth + backgroundPadding * 2, textHeight + 2);
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, fourYearRadius, startAngle, endAngle, false);
+            ctx.arc(centerX, centerY, 0, endAngle, startAngle, true);
+            ctx.closePath();
+            ctx.fillStyle = innerGradient;
+            ctx.fill();
 
-            if (isSelected || isHovered) {
-                ctx.strokeStyle = isSelected ? "#2b7fff" : "#B8D4E3";
-                ctx.lineWidth = 1;
-                ctx.globalAlpha = 0.5;
-                ctx.strokeRect(labelX - textWidth / 2 - backgroundPadding, labelY - textHeight / 2 - 1, textWidth + backgroundPadding * 2, textHeight + 2);
-            }
+            const outerGradient = ctx.createRadialGradient(centerX, centerY, fourYearRadius, centerX, centerY, maxRadius);
+            outerGradient.addColorStop(0, "#F0F4F826");
+            outerGradient.addColorStop(1, "#C0C8D226");
 
-            ctx.globalAlpha = 1;
-            ctx.fillStyle = isSelected ? "#2b7fff" : isHovered ? "#2E2E2E" : "#2E2E2E";
-            ctx.font = `${isSelected || isHovered ? "bold" : "normal"} ${isSelected ? "12px" : isHovered ? "11px" : "10px"} Inter, sans-serif`;
-            ctx.fillText(tech.name, labelX, labelY);
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, maxRadius, startAngle, endAngle, false);
+            ctx.arc(centerX, centerY, fourYearRadius, endAngle, startAngle, true);
+            ctx.closePath();
+            ctx.fillStyle = outerGradient;
+            ctx.fill();
 
-            tech.x = x;
-            tech.y = y;
-        });
+            const divisions = 10;
+            const angleStep = 24;
+            ctx.strokeStyle = "#E5E7EB";
+            ctx.lineWidth = 1;
+            ctx.globalAlpha = 0.3;
 
-        if (needleEnabled) {
-            let normalizedAngle = needleAngle % 360;
-            if (normalizedAngle < 0) normalizedAngle += 360;
-            const isInArc = (normalizedAngle >= 150 && normalizedAngle <= 360) || (normalizedAngle >= 0 && normalizedAngle <= 30);
-
-            if (isInArc && trailOpacity > 0) {
-                const needleCanvasAngle = (normalizedAngle * Math.PI) / 180;
-                const needleEndX = centerX + Math.cos(needleCanvasAngle) * maxRadius;
-                const needleEndY = centerY + Math.sin(needleCanvasAngle) * maxRadius;
-
-                for (let i = 0; i < 20; i++) {
-                    const trailProgress = i / 20;
-                    const trailAngleOffset = 20 * trailProgress;
-                    let trailAngle = needleAngle - trailAngleOffset;
-
-                    let normalizedTrailAngle = trailAngle % 360;
-                    if (normalizedTrailAngle < 0) normalizedTrailAngle += 360;
-
-                    const trailIsInArc = (normalizedTrailAngle >= 150 && normalizedTrailAngle <= 360) || (normalizedTrailAngle >= 0 && normalizedTrailAngle <= 30);
-                    if (!trailIsInArc) continue;
-
-                    const trailCanvasAngle = (normalizedTrailAngle * Math.PI) / 180;
-                    const trailEndX = centerX + Math.cos(trailCanvasAngle) * maxRadius;
-                    const trailEndY = centerY + Math.sin(trailCanvasAngle) * maxRadius;
-                    const finalOpacity = (1 - trailProgress) * 0.3 * trailOpacity;
-
-                    if (finalOpacity > 0.01) {
-                        ctx.beginPath();
-                        ctx.moveTo(centerX, centerY);
-                        ctx.lineTo(trailEndX, trailEndY);
-                        ctx.strokeStyle = `#2B7FFF${Math.round(finalOpacity * 255).toString(16).padStart(2, "0")}`;
-                        ctx.lineWidth = 2;
-                        ctx.stroke();
-                    }
-                }
-
-                const needleGradient = ctx.createLinearGradient(centerX, centerY, needleEndX, needleEndY);
-                needleGradient.addColorStop(0, "#2b7fff");
-                needleGradient.addColorStop(1, "#2b7fff");
-
-                ctx.shadowBlur = 3;
-                ctx.shadowColor = "#2b7fff";
-                ctx.globalAlpha = 0.5 * trailOpacity;
+            for (let i = 0; i <= divisions; i++) {
+                const radarAngle = 150 + i * angleStep;
+                const canvasAngle = (radarAngle * Math.PI) / 180;
+                const x = centerX + Math.cos(canvasAngle) * maxRadius;
+                const y = centerY + Math.sin(canvasAngle) * maxRadius;
                 ctx.beginPath();
                 ctx.moveTo(centerX, centerY);
-                ctx.lineTo(needleEndX, needleEndY);
-                ctx.strokeStyle = needleGradient;
-                ctx.lineWidth = 1;
+                ctx.lineTo(x, y);
+                ctx.stroke();
+            }
+
+            const gradientRingRadius = maxRadius + 20;
+            const gradientRingWidth = 12;
+            const impactGradient = ctx.createLinearGradient(
+                centerX + Math.cos(startAngle) * gradientRingRadius,
+                centerY + Math.sin(startAngle) * gradientRingRadius,
+                centerX + Math.cos(endAngle) * gradientRingRadius,
+                centerY + Math.sin(endAngle) * gradientRingRadius
+            );
+            impactGradient.addColorStop(0, "#E8F4F8");
+            impactGradient.addColorStop(0.5, "#B8D4E3");
+            impactGradient.addColorStop(1, "#2b7fff");
+
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, gradientRingRadius, startAngle, endAngle, false);
+            ctx.arc(centerX, centerY, gradientRingRadius - gradientRingWidth, endAngle, startAngle, true);
+            ctx.closePath();
+            ctx.fillStyle = impactGradient;
+            ctx.globalAlpha = 0.8;
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, gradientRingRadius, startAngle, endAngle, false);
+            ctx.strokeStyle = "#D1D5DB";
+            ctx.lineWidth = 1;
+            ctx.globalAlpha = 0.4;
+            ctx.stroke();
+
+            const rings = [
+                { years: 2, radius: maxRadius * 0.2, color: "#A0A8B2" },
+                { years: 4, radius: maxRadius * 0.4, color: "#B0BAC5" },
+                { years: 6, radius: maxRadius * 0.6, color: "#C0CAD8" },
+                { years: 8, radius: maxRadius * 0.8, color: "#D0DCEB" },
+                { years: 10, radius: maxRadius, color: "#E0EDEF" },
+            ];
+
+            rings.forEach((ring) => {
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, ring.radius, startAngle, endAngle, false);
+                ctx.strokeStyle = ring.color;
+                ctx.lineWidth = 0.5;
+                ctx.stroke();
+                ctx.fillStyle = "#2E2E2E";
+                ctx.globalAlpha = 0.8;
+                ctx.font = "10px Inter, sans-serif";
+                ctx.textAlign = "center";
+                ctx.fillText(`${ring.years}yr`, centerX, centerY - ring.radius - 8);
+            });
+
+            ctx.fillStyle = "#2E2E2E";
+            ctx.globalAlpha = 0.7;
+            ctx.font = "12px Inter, sans-serif";
+            ctx.fillText("0% Impact", centerX + Math.cos(startAngle) * (maxRadius + 35), centerY + Math.sin(startAngle) * (maxRadius + 35) + 15);
+            ctx.fillText("100% Impact", centerX + Math.cos(endAngle) * (maxRadius + 35), centerY + Math.sin(endAngle) * (maxRadius + 35) + 15);
+
+            const arcSpan = 240;
+            const startRadarAngle = 150;
+
+            technologies.forEach((tech, index) => {
+                const impactAngle = startRadarAngle + (tech.impact / 100) * arcSpan;
+                let radarAngle = impactAngle;
+
+                if (radarAngle >= 360) {
+                    radarAngle -= 360;
+                }
+
+                const canvasAngle = (radarAngle * Math.PI) / 180;
+                const normalizedTimeline = Math.min(tech.timeline / 10, 1);
+                const radius = normalizedTimeline * maxRadius;
+
+                const x = centerX + Math.cos(canvasAngle) * radius;
+                const y = centerY + Math.sin(canvasAngle) * radius;
+
+                const isSelected = selectedTechnology?.id === tech.id;
+                const isHovered = hoveredTechnology?.id === tech.id;
+                const scale = isSelected ? 1.5 : isHovered ? 1.2 : 1;
+                const alpha = isSelected || isHovered ? 1 : 0.9;
+
+                ctx.globalAlpha = alpha;
+                ctx.beginPath();
+                ctx.arc(x, y, 6 * scale, 0, 2 * Math.PI);
+                ctx.fillStyle = "#FFFFFF";
+                ctx.fill();
+                ctx.strokeStyle = "#2b7fff";
+                ctx.lineWidth = 2;
                 ctx.stroke();
 
-                ctx.shadowBlur = 0;
-                ctx.shadowColor = "transparent";
+                if (isSelected || isHovered) {
+                    ctx.beginPath();
+                    ctx.arc(x, y, 12 * scale, 0, 2 * Math.PI);
+                    ctx.fillStyle = "#2b7fff";
+                    ctx.globalAlpha = 0.2;
+                    ctx.fill();
+                }
+
+                const labelOffset = 15 * scale;
+                const labelX = x + Math.cos(canvasAngle) * labelOffset;
+                const labelY = y + Math.sin(canvasAngle) * labelOffset;
+                const textMetrics = ctx.measureText(tech.name);
+                const textWidth = textMetrics.width;
+                const textHeight = isSelected ? 14 : isHovered ? 13 : 12;
+                const backgroundAlpha = isSelected ? 0.9 : isHovered ? 0.85 : 0.7;
+                const backgroundPadding = isSelected || isHovered ? 3 : 2;
+
+                ctx.globalAlpha = backgroundAlpha;
+                ctx.fillStyle = "#FFFFFF";
+                ctx.fillRect(labelX - textWidth / 2 - backgroundPadding, labelY - textHeight / 2 - 1, textWidth + backgroundPadding * 2, textHeight + 2);
+
+                if (isSelected || isHovered) {
+                    ctx.strokeStyle = isSelected ? "#2b7fff" : "#B8D4E3";
+                    ctx.lineWidth = 1;
+                    ctx.globalAlpha = 0.5;
+                    ctx.strokeRect(labelX - textWidth / 2 - backgroundPadding, labelY - textHeight / 2 - 1, textWidth + backgroundPadding * 2, textHeight + 2);
+                }
+
                 ctx.globalAlpha = 1;
+                ctx.fillStyle = isSelected ? "#2b7fff" : isHovered ? "#2E2E2E" : "#2E2E2E";
+                ctx.font = `${isSelected || isHovered ? "bold" : "normal"} ${isSelected ? "12px" : isHovered ? "11px" : "10px"} Inter, sans-serif`;
+                ctx.fillText(tech.name, labelX, labelY);
+
+                tech.x = x;
+                tech.y = y;
+            });
+
+            ctx.restore();
+        };
+
+        // تابع رندر needle
+        const renderNeedle = () => {
+            if (!needleEnabled || !ctx || !canvas) return;
+
+            // آپدیت needleAngle
+            setNeedleAngle((prevAngle) => {
+                const increment = 0.5;
+                let newAngle = prevAngle + increment;
+
+                let normalizedAngle = newAngle % 360;
+                if (normalizedAngle < 0) normalizedAngle += 360;
+                const isInArc = (normalizedAngle >= 150 && normalizedAngle <= 360) || (normalizedAngle >= 0 && normalizedAngle <= 30);
+
+                if (newAngle >= 390 || !isInArc) {
+                    setTrailOpacity(0);
+                    setTimeout(() => {
+                        setTrailOpacity(1);
+                        setNeedleAngle(150);
+                    }, 200);
+                    return 150;
+                }
+
+                if (newAngle >= 360) {
+                    newAngle -= 360;
+                }
+
+                return newAngle;
+            });
+
+            // رندر رادار و needle
+            ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr); // پاکسازی canvas
+            renderRadar(); // رندر رادار
+
+            ctx.save();
+            ctx.translate(panOffset.x, panOffset.y);
+            ctx.scale(zoomLevel, zoomLevel);
+
+            const centerX = dimensions.width / 2;
+            const centerY = dimensions.height / 2;
+            const maxRadius = Math.min(dimensions.width / 2 - 50, dimensions.height / 2 - 50);
+
+            if (needleEnabled) {
+                let normalizedAngle = needleAngle % 360;
+                if (normalizedAngle < 0) normalizedAngle += 360;
+                const isInArc = (normalizedAngle >= 150 && normalizedAngle <= 360) || (normalizedAngle >= 0 && normalizedAngle <= 30);
+
+                if (isInArc && trailOpacity > 0) {
+                    const needleCanvasAngle = (normalizedAngle * Math.PI) / 180;
+                    const needleEndX = centerX + Math.cos(needleCanvasAngle) * maxRadius;
+                    const needleEndY = centerY + Math.sin(needleCanvasAngle) * maxRadius;
+
+                    for (let i = 0; i < 20; i++) {
+                        const trailProgress = i / 20;
+                        const trailAngleOffset = 20 * trailProgress;
+                        let trailAngle = needleAngle - trailAngleOffset;
+
+                        let normalizedTrailAngle = trailAngle % 360;
+                        if (normalizedTrailAngle < 0) normalizedTrailAngle += 360;
+
+                        const trailIsInArc = (normalizedTrailAngle >= 150 && normalizedAngle <= 360) || (normalizedTrailAngle >= 0 && normalizedTrailAngle <= 30);
+                        if (!trailIsInArc) continue;
+
+                        const trailCanvasAngle = (normalizedTrailAngle * Math.PI) / 180;
+                        const trailEndX = centerX + Math.cos(trailCanvasAngle) * maxRadius;
+                        const trailEndY = centerY + Math.sin(trailCanvasAngle) * maxRadius;
+                        const finalOpacity = (1 - trailProgress) * 0.3 * trailOpacity;
+
+                        if (finalOpacity > 0.01) {
+                            ctx.beginPath();
+                            ctx.moveTo(centerX, centerY);
+                            ctx.lineTo(trailEndX, trailEndY);
+                            ctx.strokeStyle = `#2B7FFF${Math.round(finalOpacity * 255).toString(16).padStart(2, "0")}`;
+                            ctx.lineWidth = 2;
+                            ctx.stroke();
+                        }
+                    }
+
+                    const needleGradient = ctx.createLinearGradient(centerX, centerY, needleEndX, needleEndY);
+                    needleGradient.addColorStop(0, "#2b7fff");
+                    needleGradient.addColorStop(1, "#2b7fff");
+
+                    ctx.shadowBlur = 3;
+                    ctx.shadowColor = "#2b7fff";
+                    ctx.globalAlpha = 0.5 * trailOpacity;
+                    ctx.beginPath();
+                    ctx.moveTo(centerX, centerY);
+                    ctx.lineTo(needleEndX, needleEndY);
+                    ctx.strokeStyle = needleGradient;
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+
+                    ctx.shadowBlur = 0;
+                    ctx.shadowColor = "transparent";
+                    ctx.globalAlpha = 1;
+                }
             }
+
+            ctx.restore();
+            animationRef.current = requestAnimationFrame(renderNeedle);
+        };
+
+        // رندر اولیه رادار
+        renderRadar();
+
+        // شروع انیمیشن needle
+        if (needleEnabled && dimensions.width > 0) {
+            animationRef.current = requestAnimationFrame(renderNeedle);
         }
 
-        ctx.restore();
-    }, [
-        dimensions,
-        technologies,
-        selectedTechnology,
-        hoveredTechnology,
-        needleAngle,
-        needleEnabled,
-        trailOpacity,
-        zoomLevel,
-        panOffset,
-    ]);
+        // مدیریت خطا برای تصویر
+        backgroundImage.onerror = () => {
+            console.error("Failed to load background image");
+            renderRadar(); // رندر بدون تصویر
+        };
+
+        // پاکسازی انیمیشن
+        return () => {
+            if (animationRef.current) cancelAnimationFrame(animationRef.current);
+        };
+    }, [dimensions, technologies, selectedTechnology, hoveredTechnology, needleEnabled, zoomLevel, panOffset, needleAngle, trailOpacity]);
+
+
 
     const handleCanvasClick = (event: React.MouseEvent<HTMLCanvasElement>) => {
         if (!canvasRef.current) return;
