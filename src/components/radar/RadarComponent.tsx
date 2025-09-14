@@ -1,6 +1,6 @@
-
-import React, { useRef, useEffect, useState, useCallback } from "react";
-import { Technology } from "../lib/data";
+import React, {useRef, useEffect, useState, useCallback} from "react";
+import {menuItems, Technology} from "../lib/data";
+import AccordionMenu from "../tools/AccordionMenu";
 
 interface RadarChartProps {
     technologies: Technology[];
@@ -15,24 +15,25 @@ interface RadarChartProps {
 }
 
 export function RadarChart({
-                              technologies,
-                              onTechnologyHover,
-                              onTechnologyClick,
-                              selectedTechnology,
-                              hoveredTechnology,
-                              needleEnabled = true,
-                              zoomLevel: externalZoomLevel = 1,
-                              panOffset: externalPanOffset = { x: 0, y: 0 },
-                              onPanChange,
-                          }: RadarChartProps) {
+                               technologies,
+                               onTechnologyHover,
+                               onTechnologyClick,
+                               selectedTechnology,
+                               hoveredTechnology,
+                               needleEnabled = true,
+                               zoomLevel: externalZoomLevel = 1,
+                               panOffset: externalPanOffset = {x: 0, y: 0},
+                               onPanChange,
+                           }: RadarChartProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const animationRef = useRef<number>(0);
-    const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+    const [dimensions, setDimensions] = useState({width: 0, height: 0});
     const [needleAngle, setNeedleAngle] = useState(150);
     const [trailOpacity, setTrailOpacity] = useState(1);
+    const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
     const [isDragging, setIsDragging] = useState(false);
-    const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+    const [dragStart, setDragStart] = useState({x: 0, y: 0});
     const [isHovered, setIsHovered] = useState(false);
     const [modalTech, setModalTech] = useState<Technology | null>(null);
     const [zoomLevel, setZoomLevel] = useState(externalZoomLevel);
@@ -111,9 +112,9 @@ export function RadarChart({
             const newPanOffsetY = mouseY - zoomPointY * newZoomLevel;
 
             setZoomLevel(newZoomLevel);
-            setPanOffset({ x: newPanOffsetX, y: newPanOffsetY });
+            setPanOffset({x: newPanOffsetX, y: newPanOffsetY});
             if (onPanChange) {
-                onPanChange({ x: newPanOffsetX, y: newPanOffsetY });
+                onPanChange({x: newPanOffsetX, y: newPanOffsetY});
             }
         },
         [zoomLevel, panOffset, onPanChange]
@@ -174,9 +175,9 @@ export function RadarChart({
     useEffect(() => {
         const canvas = canvasRef.current;
         if (canvas) {
-            canvas.addEventListener("wheel", handleWheel, { passive: false });
-            canvas.addEventListener("touchstart", handleTouchStart, { passive: false });
-            canvas.addEventListener("touchmove", handleTouchMove, { passive: false });
+            canvas.addEventListener("wheel", handleWheel, {passive: false});
+            canvas.addEventListener("touchstart", handleTouchStart, {passive: false});
+            canvas.addEventListener("touchmove", handleTouchMove, {passive: false});
             canvas.addEventListener("touchend", handleTouchEnd);
             return () => {
                 canvas.removeEventListener("wheel", handleWheel);
@@ -306,11 +307,11 @@ export function RadarChart({
         ctx.stroke();
 
         const rings = [
-            { years: 2, radius: maxRadius * 0.2, color: "#A0A8B2" },
-            { years: 4, radius: maxRadius * 0.4, color: "#B0BAC5" },
-            { years: 6, radius: maxRadius * 0.6, color: "#C0CAD8" },
-            { years: 8, radius: maxRadius * 0.8, color: "#D0DCEB" },
-            { years: 10, radius: maxRadius, color: "#E0EDEF" },
+            {years: 2, radius: maxRadius * 0.2, color: "#A0A8B2"},
+            {years: 4, radius: maxRadius * 0.4, color: "#B0BAC5"},
+            {years: 6, radius: maxRadius * 0.6, color: "#C0CAD8"},
+            {years: 8, radius: maxRadius * 0.8, color: "#D0DCEB"},
+            {years: 10, radius: maxRadius, color: "#E0EDEF"},
         ];
 
         rings.forEach((ring) => {
@@ -496,7 +497,7 @@ export function RadarChart({
     const handleMouseDown = (event: React.MouseEvent<HTMLCanvasElement>) => {
         if (event.button === 0) {
             setIsDragging(true);
-            setDragStart({ x: event.clientX - panOffset.x, y: event.clientY - panOffset.y });
+            setDragStart({x: event.clientX - panOffset.x, y: event.clientY - panOffset.y});
         }
     };
 
@@ -529,7 +530,7 @@ export function RadarChart({
         onTechnologyHover(null);
     };
 
-    const Modal = ({ tech, onClose }: { tech: Technology; onClose: () => void }) => (
+    const Modal = ({tech, onClose}: { tech: Technology; onClose: () => void }) => (
         <div
             className="fixed inset-0 bg-black/40 backdrop-blur-[2px] bg-opacity-50 flex items-center justify-center !z-[1000]"
             onClick={() => {
@@ -575,7 +576,16 @@ export function RadarChart({
             ref={containerRef}
             className="w-full min-h-[90vh] flex flex-col items-center justify-center bg-white rounded-lg relative overflow-hidden"
         >
-            <div className={`relative flex items-center justify-between gap-4  ${isFullscreen ? 'mt-28':'mt-8'} transition-all`}>
+            <div
+                className={` flex items-center justify-between gap-4  ${isFullscreen ? 'mt-28' : 'lg:mt-8 mt-20'} transition-all`}>
+                <div className={'absolute top-36 lg:left-10 '}>
+                    <AccordionMenu
+                        items={menuItems}
+                        onSelectionChange={(keys) => {
+                            setSelectedKeys(keys);
+                        }}
+                    />
+                </div>
 
                 <div className={'flex items-center justify-center bg-gray-100 p-5 rounded'}>
                     A
@@ -596,7 +606,7 @@ export function RadarChart({
                 onMouseDown={handleMouseDown}
                 onMouseUp={handleMouseUp}
                 className="w-full h-full transition-all"
-                style={{ width: dimensions.width, height: dimensions.height }}
+                style={{width: dimensions.width, height: dimensions.height}}
             />
             <div className="absolute bottom-36 left-1/2 transform -translate-x-1/2">
                 <p className="text-xs text-[#2E2E2E]/60 text-center">
@@ -626,7 +636,7 @@ export function RadarChart({
                     {isFullscreen ? "🡯" : "🡭"}
                 </button>
             </div>
-            {modalTech && <Modal tech={modalTech} onClose={closeModal} />}
+            {modalTech && <Modal tech={modalTech} onClose={closeModal}/>}
         </div>
     );
 }

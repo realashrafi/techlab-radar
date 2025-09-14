@@ -14,7 +14,42 @@ export interface Technology {
     x?: number // for chart positioning
     y?: number // for chart positioning
 }
+export const menuItems = [
+    {
+        key: 'parent1',
+        title: 'والد ۱',
+        checked: false, // checked اولیه
+        children: [
+            {
+                key: 'child1-1',
+                title: 'فرزند ۱-۱',
+                checked: false
+            },
+            {
+                key: 'child1-2',
+                title: 'فرزند ۱-۲',
+                checked:false,
+            },
+        ],
+    },{
+        key: 'parent2',
+        title: 'والد2',
+        checked: false, // checked اولیه
+        children: [
+            {
+                key: 'child1-1',
+                title: 'فرزند ۱-۱',
+                checked: false
+            },
+            {
+                key: 'child1-2',
+                title: 'فرزند ۱-۲',
+                checked:false,
+            },
+        ],
+    },
 
+];
 export interface FilterState {
     sectors: string[]
     trendClusters: string[]
