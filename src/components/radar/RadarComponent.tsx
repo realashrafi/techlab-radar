@@ -243,7 +243,7 @@ export function RadarChart({
             const maxRadius = Math.min(dimensions.width / 2 - 50, dimensions.height / 2 - 50);
             const startAngle = (150 * Math.PI) / 180;
             const endAngle = (30 * Math.PI) / 180;
-            const fourYearRadius = maxRadius * 0.4;
+            const fourYearRadius = maxRadius * 0.01;
 
             // رسم تصویر پس‌زمینه فقط در ناحیه رادار با گرادیانت محو
             if (backgroundImage.complete && backgroundImage.naturalWidth !== 0) {
@@ -275,8 +275,8 @@ export function RadarChart({
                     maxRadius
                 );
                 fadeGradient.addColorStop(0, "rgba(255, 255, 255, 0)"); // مرکز شفاف
-                fadeGradient.addColorStop(0.7, "rgba(255, 255, 255, 0.8)");
-                fadeGradient.addColorStop(1, "rgba(255, 255, 255, 1)"); // لبه‌ها مات
+                fadeGradient.addColorStop(0.7, "rgba(255, 255, 255, 0.3)");
+                fadeGradient.addColorStop(1, "rgba(255, 255, 255, 0.5)"); // لبه‌ها مات
 
                 ctx.globalAlpha = 1;
                 ctx.fillStyle = fadeGradient;
