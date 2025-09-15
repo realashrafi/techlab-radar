@@ -681,7 +681,7 @@ export function RadarChart({
     return (
         <div
             ref={containerRef}
-            className="w-full min-h-[90vh] flex flex-col items-center justify-center bg-white rounded-lg relative overflow-hidden"
+            className={`w-full min-h-[90vh] flex flex-col items-center ${isFullscreen && 'bg-white'} justify-center rounded-lg relative overflow-hidden`}
         >
             <div
                 className={` flex items-center justify-between gap-4  ${isFullscreen ? 'mt-28' : 'lg:mt-8 mt-20'} transition-all`}>
