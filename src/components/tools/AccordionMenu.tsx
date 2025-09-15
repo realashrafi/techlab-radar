@@ -1,7 +1,8 @@
 //@ts-nocheck
-import React, { useState } from 'react';
+import React, {useState} from 'react';
 import SwitchButton from './SwitchButton';
-import { VscChevronDown, VscChevronUp } from 'react-icons/vsc';
+import {VscChevronDown, VscChevronUp} from 'react-icons/vsc';
+import {LuFilter, LuFilterX} from "react-icons/lu";
 
 interface MenuItem {
     key: string;
@@ -27,11 +28,11 @@ const useMenuSelection = () => {
         });
     };
 
-    return { selectedKeys, toggleItem };
+    return {selectedKeys, toggleItem};
 };
 
-const AccordionMenu: React.FC<AccordionMenuProps> = ({ items, onSelectionChange }) => {
-    const { selectedKeys, toggleItem } = useMenuSelection();
+const AccordionMenu: React.FC<AccordionMenuProps> = ({items, onSelectionChange}) => {
+    const {selectedKeys, toggleItem} = useMenuSelection();
     const [openItems, setOpenItems] = useState<string[]>([]);
     const [isMenuOpen, setIsMenuOpen] = useState<boolean>(false); // 控制小屏幕下菜单显示
 
@@ -76,7 +77,7 @@ const AccordionMenu: React.FC<AccordionMenuProps> = ({ items, onSelectionChange 
                         )}
                     </div>
                     {hasChildren && (
-                        <span>{isOpen ? <VscChevronUp /> : <VscChevronDown />}</span>
+                        <span>{isOpen ? <VscChevronUp/> : <VscChevronDown/>}</span>
                     )}
                 </div>
                 {hasChildren && isOpen && (
@@ -96,7 +97,10 @@ const AccordionMenu: React.FC<AccordionMenuProps> = ({ items, onSelectionChange 
                 className="lg:hidden block mb-4 px-4 py-2 bg-[#F67242] text-white rounded-md hover:bg-[#e55f32] transition-colors"
                 onClick={toggleMenu}
             >
-                {isMenuOpen ? 'Hide Filters' : 'Show Filters'}
+                {isMenuOpen ?
+                    <div className={'flex items-center'}>Hide Filters <LuFilterX className={'ml-2'}/></div> :
+                    <div className={'flex items-center'}>Show Filters <LuFilter className={'ml-2'}/></div>
+                }
             </button>
             <div
                 className={`max-w-xs overflow-y-auto h-[550px] max-h-[550px] ${

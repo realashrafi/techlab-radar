@@ -807,7 +807,7 @@ export function RadarChart({
                     Distance from center = Implementation timeline • Arc position = Business impact (0-100%)
                 </p>
             </div>
-            <div className="absolute lg:top-28 top-8 left-4 lg:left-12 flex space-x-2">
+            <div className="absolute lg:top-28 top-8 left-8 lg:left-12 flex space-x-3">
                 <button
                     onClick={handleZoomIn}
                     className="bg-[#F67242] hover:bg-[#F67242]/80 text-white font-bold p-3 rounded"
@@ -837,7 +837,7 @@ export function RadarChart({
                     {isFullscreen ? <RiFullscreenExitLine /> : <RiFullscreenLine />}
                 </button>
             </div>
-            <div className="absolute lg:top-28 top-8 right-12 flex space-x-2">
+            <div className="absolute lg:top-28 top-8 right-8 flex space-x-2">
                 <CustomExportControls technologies={technologies} />
             </div>
             {modalTech && <Modal tech={modalTech} onClose={closeModal} />}
