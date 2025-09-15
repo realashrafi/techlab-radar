@@ -17,7 +17,7 @@ const SwitchButton: React.FC<SwitchButtonProps> = ({ checked = false, onChange, 
 
     return (
         <div className="flex items-center gap-2">
-            <label className="relative inline-block w-14 h-8">
+            <label className="relative inline-block scale-[90%] w-14 h-8">
                 <input
                     type="checkbox"
                     checked={isChecked}

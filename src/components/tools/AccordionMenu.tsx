@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import SwitchButton from './SwitchButton'; // فرض بر import SwitchButton
+import SwitchButton from './SwitchButton';
+import { VscChevronDown } from "react-icons/vsc";
+import { VscChevronUp } from "react-icons/vsc";
 
 interface MenuItem {
     key: string;
@@ -60,7 +62,7 @@ const AccordionMenu: React.FC<AccordionMenuProps> = ({ items, onSelectionChange 
                     onClick={() => hasChildren && toggleAccordion(index)}
                 >
                     <div className="flex items-center justify-between flex-1 gap-2">
-                        <span className={`text-gray-800 text-base ${isLeaf ? 'ml-0' : 'ml-2'}`}>{item.title}</span>
+                        <span className={`text-gray-800 text-[14px] text-base  ${isLeaf ? 'ml-0' : 'ml-2'}`}>{item.title}</span>
                         {isLeaf && (
                             <SwitchButton
                                 checked={selectedKeys.includes(item.key)}
@@ -69,7 +71,9 @@ const AccordionMenu: React.FC<AccordionMenuProps> = ({ items, onSelectionChange 
                         )}
                     </div>
                     {hasChildren && (
-                        <span>{isOpen ? '🡭' : '🡯'}</span>
+                        <span>{
+                            //@ts-ignore
+                            isOpen ? <VscChevronUp/> : <VscChevronDown/>}</span>
                     )}
                 </div>
                 {hasChildren && isOpen && (

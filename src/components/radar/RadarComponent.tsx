@@ -1,6 +1,10 @@
-import React, {useRef, useEffect, useState, useCallback} from "react";
-import {menuItems, Technology} from "../lib/data";
-import AccordionMenu from "../tools/AccordionMenu";
+//@ts-nocheck
+import React, { useRef, useEffect, useState, useCallback } from 'react';
+import { RiFullscreenLine, RiFullscreenExitLine } from 'react-icons/ri';
+import { FiZoomIn, FiZoomOut, FiRefreshCw } from 'react-icons/fi';
+import { menuItems, Technology } from '../lib/data';
+import AccordionMenu from '../tools/AccordionMenu';
+import { CustomExportControls } from '../tools/CustomExportControls';
 
 interface RadarChartProps {
     technologies: Technology[];
@@ -22,18 +26,18 @@ export function RadarChart({
                                hoveredTechnology,
                                needleEnabled = true,
                                zoomLevel: externalZoomLevel = 1,
-                               panOffset: externalPanOffset = {x: 0, y: 0},
+                               panOffset: externalPanOffset = { x: 0, y: 0 },
                                onPanChange,
                            }: RadarChartProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const animationRef = useRef<number>(0);
-    const [dimensions, setDimensions] = useState({width: 0, height: 0});
+    const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
     const [needleAngle, setNeedleAngle] = useState(150);
     const [trailOpacity, setTrailOpacity] = useState(1);
     const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
     const [isDragging, setIsDragging] = useState(false);
-    const [dragStart, setDragStart] = useState({x: 0, y: 0});
+    const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
     const [isHovered, setIsHovered] = useState(false);
     const [modalTech, setModalTech] = useState<Technology | null>(null);
     const [zoomLevel, setZoomLevel] = useState(externalZoomLevel);
@@ -52,8 +56,8 @@ export function RadarChart({
             }
         };
         updateDimensions();
-        window.addEventListener("resize", updateDimensions);
-        return () => window.removeEventListener("resize", updateDimensions);
+        window.addEventListener('resize', updateDimensions);
+        return () => window.removeEventListener('resize', updateDimensions);
     }, []);
 
     const animateNeedle = useCallback(() => {
@@ -112,13 +116,21 @@ export function RadarChart({
             const newPanOffsetY = mouseY - zoomPointY * newZoomLevel;
 
             setZoomLevel(newZoomLevel);
-            setPanOffset({x: newPanOffsetX, y: newPanOffsetY});
+            setPanOffset({ x: newPanOffsetX, y: newPanOffsetY });
             if (onPanChange) {
-                onPanChange({x: newPanOffsetX, y: newPanOffsetY});
+                onPanChange({ x: newPanOffsetX, y: newPanOffsetY });
             }
         },
         [zoomLevel, panOffset, onPanChange]
     );
+
+    const handleResetZoom = () => {
+        setZoomLevel(1);
+        setPanOffset({ x: 0, y: 0 });
+        if (onPanChange) {
+            onPanChange({ x: 0, y: 0 });
+        }
+    };
 
     const handleWheel = useCallback(
         (event: WheelEvent) => {
@@ -175,15 +187,15 @@ export function RadarChart({
     useEffect(() => {
         const canvas = canvasRef.current;
         if (canvas) {
-            canvas.addEventListener("wheel", handleWheel, {passive: false});
-            canvas.addEventListener("touchstart", handleTouchStart, {passive: false});
-            canvas.addEventListener("touchmove", handleTouchMove, {passive: false});
-            canvas.addEventListener("touchend", handleTouchEnd);
+            canvas.addEventListener('wheel', handleWheel, { passive: false });
+            canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
+            canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
+            canvas.addEventListener('touchend', handleTouchEnd);
             return () => {
-                canvas.removeEventListener("wheel", handleWheel);
-                canvas.removeEventListener("touchstart", handleTouchStart);
-                canvas.removeEventListener("touchmove", handleTouchMove);
-                canvas.removeEventListener("touchend", handleTouchEnd);
+                canvas.removeEventListener('wheel', handleWheel);
+                canvas.removeEventListener('touchstart', handleTouchStart);
+                canvas.removeEventListener('touchmove', handleTouchMove);
+                canvas.removeEventListener('touchend', handleTouchEnd);
             };
         }
     }, [handleWheel, handleTouchStart, handleTouchMove, handleTouchEnd]);
@@ -218,7 +230,7 @@ export function RadarChart({
         if (!canvasRef.current || dimensions.width === 0 || dimensions.height === 0) return;
 
         const canvas = canvasRef.current;
-        const ctx = canvas.getContext("2d");
+        const ctx = canvas.getContext('2d');
         if (!ctx) return;
 
         const dpr = window.devicePixelRatio || 1;
@@ -226,13 +238,11 @@ export function RadarChart({
         canvas.height = dimensions.height * dpr;
         ctx.scale(dpr, dpr);
 
-        // لود تصویر پس‌زمینه
         const backgroundImage = new Image();
-        backgroundImage.src = "/iran.jpg"; // مسیر تصویر رو درست کن
+        backgroundImage.src = '/iran.jpg';
 
-        // تابع رندر رادار (بدون needle)
         const renderRadar = () => {
-            ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr); // پاکسازی canvas
+            ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr);
 
             ctx.save();
             ctx.translate(panOffset.x, panOffset.y);
@@ -243,40 +253,47 @@ export function RadarChart({
             const maxRadius = Math.min(dimensions.width / 2 - 50, dimensions.height / 2 - 50);
             const startAngle = (150 * Math.PI) / 180;
             const endAngle = (30 * Math.PI) / 180;
-            const fourYearRadius = maxRadius * 0.01;
+            const fourYearRadius = maxRadius * 0.4;
 
-            // رسم تصویر پس‌زمینه فقط در ناحیه رادار با گرادیانت محو
             if (backgroundImage.complete && backgroundImage.naturalWidth !== 0) {
                 ctx.save();
-                // ایجاد کلیپ برای ناحیه کمانی رادار
                 ctx.beginPath();
                 ctx.arc(centerX, centerY, maxRadius, startAngle, endAngle, false);
                 ctx.arc(centerX, centerY, fourYearRadius, endAngle, startAngle, true);
                 ctx.closePath();
                 ctx.clip();
 
-                // رسم تصویر با در نظر گرفتن زوم
-                ctx.globalAlpha = 0.2;
-                ctx.drawImage(
-                    backgroundImage,
-                    (centerX - dimensions.width / 2) / zoomLevel,
-                    (centerY - dimensions.height / 2) / zoomLevel,
-                    dimensions.width / zoomLevel,
-                    dimensions.height / zoomLevel
-                );
+                const worldLeft = -panOffset.x / zoomLevel;
+                const worldTop = -panOffset.y / zoomLevel;
+                const worldWidth = dimensions.width / zoomLevel;
+                const worldHeight = dimensions.height / zoomLevel;
 
-                // ایجاد گرادیانت شعاعی برای محو کردن (برعکس: مرکز شفاف، لبه‌ها مات)
+                const imgAspect = backgroundImage.naturalWidth / backgroundImage.naturalHeight;
+                const viewAspect = worldWidth / worldHeight;
+                let drawWidth, drawHeight, offsetX, offsetY;
+
+                if (imgAspect > viewAspect) {
+                    drawHeight = worldHeight;
+                    drawWidth = drawHeight * imgAspect;
+                    offsetX = worldLeft - (drawWidth - worldWidth) / 2;
+                    offsetY = worldTop;
+                } else {
+                    drawWidth = worldWidth;
+                    drawHeight = drawWidth / imgAspect;
+                    offsetX = worldLeft;
+                    offsetY = worldTop - (drawHeight - worldHeight) / 2;
+                }
+
+                ctx.globalAlpha = 0.2;
+                ctx.drawImage(backgroundImage, offsetX, offsetY, drawWidth, drawHeight);
+
                 const fadeGradient = ctx.createRadialGradient(
-                    centerX,
-                    centerY,
-                    fourYearRadius,
-                    centerX,
-                    centerY,
-                    maxRadius
+                    centerX, centerY, fourYearRadius,
+                    centerX, centerY, maxRadius
                 );
-                fadeGradient.addColorStop(0, "rgba(255, 255, 255, 0)"); // مرکز شفاف
-                fadeGradient.addColorStop(0.7, "rgba(255, 255, 255, 0.3)");
-                fadeGradient.addColorStop(1, "rgba(255, 255, 255, 0.5)"); // لبه‌ها مات
+                fadeGradient.addColorStop(0, 'rgba(255, 255, 255, 0)');
+                fadeGradient.addColorStop(0.7, 'rgba(255, 255, 255, 0.3)');
+                fadeGradient.addColorStop(1, 'rgba(255, 255, 255, 0.5)');
 
                 ctx.globalAlpha = 1;
                 ctx.fillStyle = fadeGradient;
@@ -289,10 +306,9 @@ export function RadarChart({
                 ctx.restore();
             }
 
-            // رندر بخش‌های اصلی رادار
             const innerGradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, fourYearRadius);
-            innerGradient.addColorStop(0, "#D0D8E233");
-            innerGradient.addColorStop(1, "#A0A8B233");
+            innerGradient.addColorStop(0, '#D0D8E233');
+            innerGradient.addColorStop(1, '#A0A8B233');
 
             ctx.beginPath();
             ctx.arc(centerX, centerY, fourYearRadius, startAngle, endAngle, false);
@@ -302,8 +318,8 @@ export function RadarChart({
             ctx.fill();
 
             const outerGradient = ctx.createRadialGradient(centerX, centerY, fourYearRadius, centerX, centerY, maxRadius);
-            outerGradient.addColorStop(0, "#F0F4F826");
-            outerGradient.addColorStop(1, "#C0C8D226");
+            outerGradient.addColorStop(0, '#F0F4F826');
+            outerGradient.addColorStop(1, '#C0C8D226');
 
             ctx.beginPath();
             ctx.arc(centerX, centerY, maxRadius, startAngle, endAngle, false);
@@ -314,7 +330,7 @@ export function RadarChart({
 
             const divisions = 10;
             const angleStep = 24;
-            ctx.strokeStyle = "#E5E7EB";
+            ctx.strokeStyle = '#E5E7EB';
             ctx.lineWidth = 1;
             ctx.globalAlpha = 0.3;
 
@@ -337,9 +353,9 @@ export function RadarChart({
                 centerX + Math.cos(endAngle) * gradientRingRadius,
                 centerY + Math.sin(endAngle) * gradientRingRadius
             );
-            impactGradient.addColorStop(0, "#E8F4F8");
-            impactGradient.addColorStop(0.5, "#B8D4E3");
-            impactGradient.addColorStop(1, "#2b7fff");
+            impactGradient.addColorStop(0, '#E8F4F8');
+            impactGradient.addColorStop(0.5, '#B8D4E3');
+            impactGradient.addColorStop(1, '#17A398');
 
             ctx.beginPath();
             ctx.arc(centerX, centerY, gradientRingRadius, startAngle, endAngle, false);
@@ -351,17 +367,17 @@ export function RadarChart({
 
             ctx.beginPath();
             ctx.arc(centerX, centerY, gradientRingRadius, startAngle, endAngle, false);
-            ctx.strokeStyle = "#D1D5DB";
+            ctx.strokeStyle = '#D1D5DB';
             ctx.lineWidth = 1;
             ctx.globalAlpha = 0.4;
             ctx.stroke();
 
             const rings = [
-                { years: 2, radius: maxRadius * 0.2, color: "#A0A8B2" },
-                { years: 4, radius: maxRadius * 0.4, color: "#B0BAC5" },
-                { years: 6, radius: maxRadius * 0.6, color: "#C0CAD8" },
-                { years: 8, radius: maxRadius * 0.8, color: "#D0DCEB" },
-                { years: 10, radius: maxRadius, color: "#E0EDEF" },
+                { years: 2, radius: maxRadius * 0.2, color: '#A0A8B2' },
+                { years: 4, radius: maxRadius * 0.4, color: '#B0BAC5' },
+                { years: 6, radius: maxRadius * 0.6, color: '#C0CAD8' },
+                { years: 8, radius: maxRadius * 0.8, color: '#D0DCEB' },
+                { years: 10, radius: maxRadius, color: '#E0EDEF' },
             ];
 
             rings.forEach((ring) => {
@@ -370,18 +386,18 @@ export function RadarChart({
                 ctx.strokeStyle = ring.color;
                 ctx.lineWidth = 0.5;
                 ctx.stroke();
-                ctx.fillStyle = "#2E2E2E";
+                ctx.fillStyle = '#2E2E2E';
                 ctx.globalAlpha = 0.8;
-                ctx.font = "10px Inter, sans-serif";
-                ctx.textAlign = "center";
+                ctx.font = '10px Inter, sans-serif';
+                ctx.textAlign = 'center';
                 ctx.fillText(`${ring.years}yr`, centerX, centerY - ring.radius - 8);
             });
 
-            ctx.fillStyle = "#2E2E2E";
+            ctx.fillStyle = '#2E2E2E';
             ctx.globalAlpha = 0.7;
-            ctx.font = "12px Inter, sans-serif";
-            ctx.fillText("0% Impact", centerX + Math.cos(startAngle) * (maxRadius + 35), centerY + Math.sin(startAngle) * (maxRadius + 35) + 15);
-            ctx.fillText("100% Impact", centerX + Math.cos(endAngle) * (maxRadius + 35), centerY + Math.sin(endAngle) * (maxRadius + 35) + 15);
+            ctx.font = '12px Inter, sans-serif';
+            ctx.fillText('0% Impact', centerX + Math.cos(startAngle) * (maxRadius + 35), centerY + Math.sin(startAngle) * (maxRadius + 35) + 15);
+            ctx.fillText('100% Impact', centerX + Math.cos(endAngle) * (maxRadius + 35), centerY + Math.sin(endAngle) * (maxRadius + 35) + 15);
 
             const arcSpan = 240;
             const startRadarAngle = 150;
@@ -409,16 +425,16 @@ export function RadarChart({
                 ctx.globalAlpha = alpha;
                 ctx.beginPath();
                 ctx.arc(x, y, 6 * scale, 0, 2 * Math.PI);
-                ctx.fillStyle = "#FFFFFF";
+                ctx.fillStyle = '#FFFFFF';
                 ctx.fill();
-                ctx.strokeStyle = "#2b7fff";
+                ctx.strokeStyle = '#17A398';
                 ctx.lineWidth = 2;
                 ctx.stroke();
 
                 if (isSelected || isHovered) {
                     ctx.beginPath();
                     ctx.arc(x, y, 12 * scale, 0, 2 * Math.PI);
-                    ctx.fillStyle = "#2b7fff";
+                    ctx.fillStyle = '#17A398';
                     ctx.globalAlpha = 0.2;
                     ctx.fill();
                 }
@@ -433,19 +449,19 @@ export function RadarChart({
                 const backgroundPadding = isSelected || isHovered ? 3 : 2;
 
                 ctx.globalAlpha = backgroundAlpha;
-                ctx.fillStyle = "#FFFFFF";
+                ctx.fillStyle = '#FFFFFF';
                 ctx.fillRect(labelX - textWidth / 2 - backgroundPadding, labelY - textHeight / 2 - 1, textWidth + backgroundPadding * 2, textHeight + 2);
 
                 if (isSelected || isHovered) {
-                    ctx.strokeStyle = isSelected ? "#2b7fff" : "#B8D4E3";
+                    ctx.strokeStyle = isSelected ? '#17A398' : '#B8D4E3';
                     ctx.lineWidth = 1;
                     ctx.globalAlpha = 0.5;
                     ctx.strokeRect(labelX - textWidth / 2 - backgroundPadding, labelY - textHeight / 2 - 1, textWidth + backgroundPadding * 2, textHeight + 2);
                 }
 
                 ctx.globalAlpha = 1;
-                ctx.fillStyle = isSelected ? "#2b7fff" : isHovered ? "#2E2E2E" : "#2E2E2E";
-                ctx.font = `${isSelected || isHovered ? "bold" : "normal"} ${isSelected ? "12px" : isHovered ? "11px" : "10px"} Inter, sans-serif`;
+                ctx.fillStyle = isSelected ? '#17A398' : isHovered ? '#2E2E2E' : '#2E2E2E';
+                ctx.font = `${isSelected || isHovered ? 'bold' : 'normal'} ${isSelected ? '12px' : isHovered ? '11px' : '10px'} Inter, sans-serif`;
                 ctx.fillText(tech.name, labelX, labelY);
 
                 tech.x = x;
@@ -455,11 +471,9 @@ export function RadarChart({
             ctx.restore();
         };
 
-        // تابع رندر needle
         const renderNeedle = () => {
             if (!needleEnabled || !ctx || !canvas) return;
 
-            // آپدیت needleAngle
             setNeedleAngle((prevAngle) => {
                 const increment = 0.5;
                 let newAngle = prevAngle + increment;
@@ -484,9 +498,8 @@ export function RadarChart({
                 return newAngle;
             });
 
-            // رندر رادار و needle
-            ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr); // پاکسازی canvas
-            renderRadar(); // رندر رادار
+            ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr);
+            renderRadar();
 
             ctx.save();
             ctx.translate(panOffset.x, panOffset.y);
@@ -526,18 +539,18 @@ export function RadarChart({
                             ctx.beginPath();
                             ctx.moveTo(centerX, centerY);
                             ctx.lineTo(trailEndX, trailEndY);
-                            ctx.strokeStyle = `#2B7FFF${Math.round(finalOpacity * 255).toString(16).padStart(2, "0")}`;
+                            ctx.strokeStyle = `#17A398${Math.round(finalOpacity * 255).toString(16).padStart(2, '0')}`;
                             ctx.lineWidth = 2;
                             ctx.stroke();
                         }
                     }
 
                     const needleGradient = ctx.createLinearGradient(centerX, centerY, needleEndX, needleEndY);
-                    needleGradient.addColorStop(0, "#2b7fff");
-                    needleGradient.addColorStop(1, "#2b7fff");
+                    needleGradient.addColorStop(0, '#17A398');
+                    needleGradient.addColorStop(1, '#17A398');
 
                     ctx.shadowBlur = 3;
-                    ctx.shadowColor = "#2b7fff";
+                    ctx.shadowColor = '#17A398';
                     ctx.globalAlpha = 0.5 * trailOpacity;
                     ctx.beginPath();
                     ctx.moveTo(centerX, centerY);
@@ -547,7 +560,7 @@ export function RadarChart({
                     ctx.stroke();
 
                     ctx.shadowBlur = 0;
-                    ctx.shadowColor = "transparent";
+                    ctx.shadowColor = 'transparent';
                     ctx.globalAlpha = 1;
                 }
             }
@@ -556,27 +569,21 @@ export function RadarChart({
             animationRef.current = requestAnimationFrame(renderNeedle);
         };
 
-        // رندر اولیه رادار
         renderRadar();
 
-        // شروع انیمیشن needle
         if (needleEnabled && dimensions.width > 0) {
             animationRef.current = requestAnimationFrame(renderNeedle);
         }
 
-        // مدیریت خطا برای تصویر
         backgroundImage.onerror = () => {
-            console.error("Failed to load background image");
-            renderRadar(); // رندر بدون تصویر
+            console.error('Failed to load background image');
+            renderRadar();
         };
 
-        // پاکسازی انیمیشن
         return () => {
             if (animationRef.current) cancelAnimationFrame(animationRef.current);
         };
     }, [dimensions, technologies, selectedTechnology, hoveredTechnology, needleEnabled, zoomLevel, panOffset, needleAngle, trailOpacity]);
-
-
 
     const handleCanvasClick = (event: React.MouseEvent<HTMLCanvasElement>) => {
         if (!canvasRef.current) return;
@@ -586,7 +593,7 @@ export function RadarChart({
         const clickedTech = technologies.find((tech) => {
             if (!tech.x || !tech.y) return false;
             const distance = Math.sqrt((x - tech.x) ** 2 + (y - tech.y) ** 2);
-            return distance <= 12 / zoomLevel; // Adjust hitbox size based on zoom
+            return distance <= 12 / zoomLevel;
         });
         onTechnologyClick(clickedTech || null);
         if (clickedTech) {
@@ -597,14 +604,14 @@ export function RadarChart({
     };
 
     const closeModal = useCallback(() => {
-        console.log("closeModal");
+        console.log('closeModal');
         setModalTech(null);
     }, []);
 
     const handleMouseDown = (event: React.MouseEvent<HTMLCanvasElement>) => {
         if (event.button === 0) {
             setIsDragging(true);
-            setDragStart({x: event.clientX - panOffset.x, y: event.clientY - panOffset.y});
+            setDragStart({ x: event.clientX - panOffset.x, y: event.clientY - panOffset.y });
         }
     };
 
@@ -627,7 +634,7 @@ export function RadarChart({
             return distance <= 12 / zoomLevel;
         });
         onTechnologyHover(hoveredTech || null);
-        canvasRef.current.style.cursor = hoveredTech ? "pointer" : isDragging ? "grabbing" : "grab";
+        canvasRef.current.style.cursor = hoveredTech ? 'pointer' : isDragging ? 'grabbing' : 'grab';
     };
 
     const handleMouseUp = () => setIsDragging(false);
@@ -637,11 +644,11 @@ export function RadarChart({
         onTechnologyHover(null);
     };
 
-    const Modal = ({tech, onClose}: { tech: Technology; onClose: () => void }) => (
+    const Modal = ({ tech, onClose }: { tech: Technology; onClose: () => void }) => (
         <div
             className="fixed inset-0 bg-black/40 backdrop-blur-[2px] bg-opacity-50 flex items-center justify-center !z-[1000]"
             onClick={() => {
-                console.log("Overlay clicked");
+                console.log('Overlay clicked');
                 onClose();
             }}
         >
@@ -653,7 +660,7 @@ export function RadarChart({
                     <h2 className="text-xl font-bold text-gray-800">{tech.name}</h2>
                     <button
                         onClick={() => {
-                            console.log("Close button clicked");
+                            console.log('Close button clicked');
                             onClose();
                         }}
                         className="text-gray-500 hover:text-gray-700 text-2xl focus:outline-none focus:ring-2 focus:ring-gray-500 pointer-events-auto"
@@ -684,8 +691,9 @@ export function RadarChart({
             className={`w-full min-h-[90vh] flex flex-col items-center ${isFullscreen && 'bg-white'} justify-center rounded-lg relative overflow-hidden`}
         >
             <div
-                className={` flex items-center justify-between gap-4  ${isFullscreen ? 'mt-28' : 'lg:mt-8 mt-20'} transition-all`}>
-                <div className={'absolute top-36 lg:left-10 '}>
+                className={`flex items-center justify-between gap-4 ${isFullscreen ? 'mt-28' : 'lg:mt-8 mt-20'} transition-all`}
+            >
+                <div className={'absolute top-40 lg:left-10'}>
                     <AccordionMenu
                         items={menuItems}
                         onSelectionChange={(keys) => {
@@ -695,15 +703,15 @@ export function RadarChart({
                 </div>
 
                 <div className={'flex flex-col items-start justify-center lg:text-[14px] text-[12px] bg-gray-50 p-3 lg:min-w-68 border border-black/10 rounded-md'}>
-                    <span >Total Technologies</span>
+                    <span>Total Technologies</span>
                     <span className={'font-bold'}>25</span>
                 </div>
                 <div className={'flex flex-col items-start justify-center lg:text-[14px] text-[12px] bg-gray-50 p-3 lg:min-w-68 border border-black/10 rounded-md'}>
-                   <span >High Impact</span>
+                    <span>High Impact</span>
                     <span className={'font-bold'}>11</span>
                 </div>
                 <div className={'flex flex-col items-start justify-center lg:text-[14px] text-[12px] bg-gray-50 p-3 lg:min-w-68 border border-black/10 rounded-md'}>
-                    <span >Near Term</span>
+                    <span>Near Term</span>
                     <span className={'font-bold'}>10</span>
                 </div>
             </div>
@@ -716,37 +724,47 @@ export function RadarChart({
                 onMouseDown={handleMouseDown}
                 onMouseUp={handleMouseUp}
                 className="w-full h-full transition-all"
-                style={{width: dimensions.width, height: dimensions.height}}
+                style={{ width: dimensions.width, height: dimensions.height }}
             />
             <div className="absolute bottom-36 left-1/2 transform -translate-x-1/2">
                 <p className="text-xs text-[#2E2E2E]/60 text-center">
                     Distance from center = Implementation timeline • Arc position = Business impact (0-100%)
                 </p>
             </div>
-            <div className="absolute top-4 right-4 flex space-x-2">
+            <div className="absolute lg:top-28 top-8 left-4 lg:left-12 flex space-x-2">
                 <button
                     onClick={handleZoomIn}
-                    className="bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded"
+                    className="bg-[#F67242] hover:bg-[#F67242]/80 text-white font-bold p-3 rounded"
                     aria-label="Zoom In"
                 >
-                    +
+                    <FiZoomIn />
                 </button>
                 <button
                     onClick={handleZoomOut}
-                    className="bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded"
+                    className="bg-[#F67242] hover:bg-[#F67242]/80 text-white font-bold p-3 rounded"
                     aria-label="Zoom Out"
                 >
-                    -
+                    <FiZoomOut />
+                </button>
+                <button
+                    onClick={handleResetZoom}
+                    className="bg-[#F67242] hover:bg-[#F67242]/80 text-white font-bold p-3 rounded"
+                    aria-label="Reset Zoom"
+                >
+                    <FiRefreshCw />
                 </button>
                 <button
                     onClick={toggleFullscreen}
-                    className="bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded"
-                    aria-label={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
+                    className="bg-[#F67242] hover:bg-[#F67242]/80 text-white font-bold p-3 rounded"
+                    aria-label={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
                 >
-                    {isFullscreen ? "🡯" : "🡭"}
+                    {isFullscreen ? <RiFullscreenExitLine /> : <RiFullscreenLine />}
                 </button>
             </div>
-            {modalTech && <Modal tech={modalTech} onClose={closeModal}/>}
+            <div className="absolute lg:top-28 top-8 right-12 flex space-x-2">
+                <CustomExportControls technologies={technologies} />
+            </div>
+            {modalTech && <Modal tech={modalTech} onClose={closeModal} />}
         </div>
     );
 }
