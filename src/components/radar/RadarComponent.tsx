@@ -1,5 +1,6 @@
 //@ts-nocheck
 import React, { useRef, useEffect, useState, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { RiFullscreenLine, RiFullscreenExitLine } from 'react-icons/ri';
 import { FiZoomIn, FiZoomOut, FiRefreshCw } from 'react-icons/fi';
 import { menuItems, Technology } from '../lib/data';
@@ -44,6 +45,7 @@ export function RadarChart({
     const [panOffset, setPanOffset] = useState(externalPanOffset);
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [lastPinchDistance, setLastPinchDistance] = useState<number | null>(null);
+    const [techPositions, setTechPositions] = useState<Record<string, { x: number; y: number }>>({});
 
     useEffect(() => {
         const updateDimensions = () => {
@@ -402,7 +404,9 @@ export function RadarChart({
             const arcSpan = 240;
             const startRadarAngle = 150;
 
-            technologies.forEach((tech, index) => {
+            const newPositions: Record<string, { x: number; y: number }> = {};
+            const labelBoxes = []; // برای تشخیص overlap
+            technologies.forEach((tech) => {
                 const impactAngle = startRadarAngle + (tech.impact / 100) * arcSpan;
                 let radarAngle = impactAngle;
 
@@ -417,11 +421,16 @@ export function RadarChart({
                 const x = centerX + Math.cos(canvasAngle) * radius;
                 const y = centerY + Math.sin(canvasAngle) * radius;
 
-                const isSelected = selectedTechnology?.id === tech.id;
-                const isHovered = hoveredTechnology?.id === tech.id;
+                newPositions[tech.id] = { x, y };
+
+                const isSelected = selectedTechnology && String(selectedTechnology.id) === String(tech.id);
+                const isHovered = hoveredTechnology && String(hoveredTechnology.id) === String(tech.id);
+                console.log(`Tech: ${tech.name}, isHovered: ${isHovered}, hoveredTechnology: ${hoveredTechnology?.name || 'null'}`);
+
                 const scale = isSelected ? 1.5 : isHovered ? 1.2 : 1;
                 const alpha = isSelected || isHovered ? 1 : 0.9;
 
+                ctx.save();
                 ctx.globalAlpha = alpha;
                 ctx.beginPath();
                 ctx.arc(x, y, 6 * scale, 0, 2 * Math.PI);
@@ -439,67 +448,77 @@ export function RadarChart({
                     ctx.fill();
                 }
 
-                const labelOffset = 15 * scale;
-                const labelX = x + Math.cos(canvasAngle) * labelOffset;
-                const labelY = y + Math.sin(canvasAngle) * labelOffset;
+                // محاسبه offset پویا برای جلوگیری از overlap
+                const baseLabelOffset = 15 * scale;
+                let labelOffset = baseLabelOffset;
+                const angleRad = canvasAngle;
+                const labelX = x + Math.cos(angleRad) * labelOffset;
+                const labelY = y + Math.sin(angleRad) * labelOffset;
                 const textMetrics = ctx.measureText(tech.name);
                 const textWidth = textMetrics.width;
                 const textHeight = isSelected ? 14 : isHovered ? 13 : 12;
                 const backgroundAlpha = isSelected ? 0.9 : isHovered ? 0.85 : 0.7;
                 const backgroundPadding = isSelected || isHovered ? 3 : 2;
 
+                // تنظیم offset بر اساس زاویه برای توزیع بهتر labelها
+                if (Math.abs(Math.sin(angleRad)) < 0.5) {
+                    // اگر زاویه افقی باشه، label رو کمی بالاتر/پایین‌تر بذار
+                    labelOffset = baseLabelOffset + (Math.sin(angleRad) * 5);
+                } else {
+                    // اگر زاویه عمودی باشه، label رو کمی چپ/راست بذار
+                    labelOffset = baseLabelOffset + (Math.cos(angleRad) * 3);
+                }
+
+                const adjustedLabelX = x + Math.cos(angleRad) * labelOffset;
+                const adjustedLabelY = y + Math.sin(angleRad) * labelOffset;
+
+                // تشخیص overlap ساده: اگر label جدید با labelهای قبلی overlap داشته باشه، offset رو افزایش بده
+                let overlap = false;
+                for (let existingBox of labelBoxes) {
+                    const dx = Math.abs(adjustedLabelX - existingBox.x);
+                    const dy = Math.abs(adjustedLabelY - existingBox.y);
+                    if (dx < textWidth + existingBox.width && dy < textHeight + existingBox.height) {
+                        overlap = true;
+                        break;
+                    }
+                }
+
+                if (overlap) {
+                    labelOffset += 10; // افزایش offset برای جلوگیری از overlap
+                    const newLabelX = x + Math.cos(angleRad) * labelOffset;
+                    const newLabelY = y + Math.sin(angleRad) * labelOffset;
+                } else {
+                    labelBoxes.push({ x: adjustedLabelX - textWidth / 2, y: adjustedLabelY - textHeight / 2, width: textWidth + backgroundPadding * 2, height: textHeight + 2 });
+                }
+
                 ctx.globalAlpha = backgroundAlpha;
                 ctx.fillStyle = '#FFFFFF';
-                ctx.fillRect(labelX - textWidth / 2 - backgroundPadding, labelY - textHeight / 2 - 1, textWidth + backgroundPadding * 2, textHeight + 2);
+                ctx.beginPath();
+                ctx.roundRect(adjustedLabelX - textWidth / 2 - backgroundPadding, adjustedLabelY - textHeight / 2 - 1, textWidth + backgroundPadding * 2, textHeight + 2, 4); // border-radius 4px
+                ctx.fill();
 
                 if (isSelected || isHovered) {
                     ctx.strokeStyle = isSelected ? '#17A398' : '#B8D4E3';
                     ctx.lineWidth = 1;
                     ctx.globalAlpha = 0.5;
-                    ctx.strokeRect(labelX - textWidth / 2 - backgroundPadding, labelY - textHeight / 2 - 1, textWidth + backgroundPadding * 2, textHeight + 2);
+                    ctx.stroke();
                 }
 
                 ctx.globalAlpha = 1;
                 ctx.fillStyle = isSelected ? '#17A398' : isHovered ? '#2E2E2E' : '#2E2E2E';
                 ctx.font = `${isSelected || isHovered ? 'bold' : 'normal'} ${isSelected ? '12px' : isHovered ? '11px' : '10px'} Inter, sans-serif`;
-                ctx.fillText(tech.name, labelX, labelY);
+                ctx.fillText(tech.name, adjustedLabelX, adjustedLabelY);
 
-                tech.x = x;
-                tech.y = y;
+                ctx.restore();
             });
+
+            setTechPositions(newPositions);
 
             ctx.restore();
         };
 
         const renderNeedle = () => {
             if (!needleEnabled || !ctx || !canvas) return;
-
-            setNeedleAngle((prevAngle) => {
-                const increment = 0.5;
-                let newAngle = prevAngle + increment;
-
-                let normalizedAngle = newAngle % 360;
-                if (normalizedAngle < 0) normalizedAngle += 360;
-                const isInArc = (normalizedAngle >= 150 && normalizedAngle <= 360) || (normalizedAngle >= 0 && normalizedAngle <= 30);
-
-                if (newAngle >= 390 || !isInArc) {
-                    setTrailOpacity(0);
-                    setTimeout(() => {
-                        setTrailOpacity(1);
-                        setNeedleAngle(150);
-                    }, 200);
-                    return 150;
-                }
-
-                if (newAngle >= 360) {
-                    newAngle -= 360;
-                }
-
-                return newAngle;
-            });
-
-            ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr);
-            renderRadar();
 
             ctx.save();
             ctx.translate(panOffset.x, panOffset.y);
@@ -566,14 +585,20 @@ export function RadarChart({
             }
 
             ctx.restore();
-            animationRef.current = requestAnimationFrame(renderNeedle);
         };
 
-        renderRadar();
+        const renderFrame = () => {
+            if (!ctx || !canvas) return;
 
-        if (needleEnabled && dimensions.width > 0) {
-            animationRef.current = requestAnimationFrame(renderNeedle);
-        }
+            renderRadar();
+            if (needleEnabled) {
+                renderNeedle();
+            }
+
+            animationRef.current = requestAnimationFrame(renderFrame);
+        };
+
+        renderFrame();
 
         backgroundImage.onerror = () => {
             console.error('Failed to load background image');
@@ -587,26 +612,27 @@ export function RadarChart({
 
     const handleCanvasClick = (event: React.MouseEvent<HTMLCanvasElement>) => {
         if (!canvasRef.current) return;
+        console.log('Canvas clicked');
         const rect = canvasRef.current.getBoundingClientRect();
         const x = (event.clientX - rect.left - panOffset.x) / zoomLevel;
         const y = (event.clientY - rect.top - panOffset.y) / zoomLevel;
         const clickedTech = technologies.find((tech) => {
-            if (!tech.x || !tech.y) return false;
-            const distance = Math.sqrt((x - tech.x) ** 2 + (y - tech.y) ** 2);
-            return distance <= 12 / zoomLevel;
+            const pos = techPositions[tech.id];
+            if (!pos) return false;
+            const distance = Math.sqrt((x - pos.x) ** 2 + (y - pos.y) ** 2);
+            return distance <= 20 / zoomLevel;
         });
+        console.log('Clicked Tech:', clickedTech);
         onTechnologyClick(clickedTech || null);
-        if (clickedTech) {
-            setModalTech(clickedTech);
-        } else {
-            setModalTech(null);
-        }
+        setModalTech(clickedTech || null);
+        event.stopPropagation();
     };
 
     const closeModal = useCallback(() => {
-        console.log('closeModal');
+        console.log('closeModal called');
         setModalTech(null);
-    }, []);
+        onTechnologyClick(null);
+    }, [onTechnologyClick]);
 
     const handleMouseDown = (event: React.MouseEvent<HTMLCanvasElement>) => {
         if (event.button === 0) {
@@ -615,27 +641,32 @@ export function RadarChart({
         }
     };
 
-    const handleMouseMove = (event: React.MouseEvent<HTMLCanvasElement>) => {
-        if (isDragging && onPanChange) {
-            const newPanOffset = {
-                x: event.clientX - dragStart.x,
-                y: event.clientY - dragStart.y,
-            };
-            setPanOffset(newPanOffset);
-            onPanChange(newPanOffset);
-        }
-        if (!canvasRef.current) return;
-        const rect = canvasRef.current.getBoundingClientRect();
-        const x = (event.clientX - rect.left - panOffset.x) / zoomLevel;
-        const y = (event.clientY - rect.top - panOffset.y) / zoomLevel;
-        const hoveredTech = technologies.find((tech) => {
-            if (!tech.x || !tech.y) return false;
-            const distance = Math.sqrt((x - tech.x) ** 2 + (y - tech.y) ** 2);
-            return distance <= 12 / zoomLevel;
-        });
-        onTechnologyHover(hoveredTech || null);
-        canvasRef.current.style.cursor = hoveredTech ? 'pointer' : isDragging ? 'grabbing' : 'grab';
-    };
+    const handleMouseMove = useCallback(
+        (event: React.MouseEvent<HTMLCanvasElement>) => {
+            if (isDragging && onPanChange) {
+                const newPanOffset = {
+                    x: event.clientX - dragStart.x,
+                    y: event.clientY - dragStart.y,
+                };
+                setPanOffset(newPanOffset);
+                onPanChange(newPanOffset);
+            }
+            if (!canvasRef.current) return;
+            const rect = canvasRef.current.getBoundingClientRect();
+            const x = (event.clientX - rect.left - panOffset.x) / zoomLevel;
+            const y = (event.clientY - rect.top - panOffset.y) / zoomLevel;
+            const hoveredTech = technologies.find((tech) => {
+                const pos = techPositions[tech.id];
+                if (!pos) return false;
+                const distance = Math.sqrt((x - pos.x) ** 2 + (y - pos.y) ** 2);
+                return distance <= 20 / zoomLevel;
+            });
+            console.log('Hovered Tech:', hoveredTech);
+            onTechnologyHover(hoveredTech || null);
+            canvasRef.current.style.cursor = hoveredTech ? 'pointer' : isDragging ? 'grabbing' : 'grab';
+        },
+        [isDragging, dragStart, panOffset, zoomLevel, onPanChange, onTechnologyHover, technologies, techPositions]
+    );
 
     const handleMouseUp = () => setIsDragging(false);
     const handleMouseEnter = () => setIsHovered(true);
@@ -644,51 +675,96 @@ export function RadarChart({
         onTechnologyHover(null);
     };
 
-    const Modal = ({ tech, onClose }: { tech: Technology; onClose: () => void }) => (
-        <div
-            className="fixed inset-0 bg-black/40 backdrop-blur-[2px] bg-opacity-50 flex items-center justify-center !z-[1000]"
-            onClick={() => {
-                console.log('Overlay clicked');
-                onClose();
-            }}
-        >
+    useEffect(() => {
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (event.key === 'Escape' && modalTech) {
+                console.log('Esc pressed, closing modal');
+                closeModal();
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [modalTech, closeModal]);
+
+    const Modal = ({ tech, onClose }: { tech: Technology; onClose: () => void }) => {
+        return createPortal(
             <div
-                className="bg-white/90 backdrop-blur-[2px] p-6 rounded-lg max-w-md w-full mx-4 max-h-[80vh] overflow-y-auto z-[1001]"
-                onClick={(e) => e.stopPropagation()}
+                className="fixed inset-0 z-[100001]"
+                style={{
+                    pointerEvents: 'auto',
+                    userSelect: 'none',
+                }}
             >
-                <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-xl font-bold text-gray-800">{tech.name}</h2>
-                    <button
-                        onClick={() => {
-                            console.log('Close button clicked');
+                <div
+                    className="fixed inset-0 bg-black/50 backdrop-blur-[2px] z-[100002]"
+                    style={{
+                        pointerEvents: 'auto',
+                        top: 0,
+                        left: 0,
+                        width: '100vw',
+                        height: '100vh',
+                    }}
+                    onClick={(e) => {
+                        console.log('Overlay clicked, target:', e.target, 'currentTarget:', e.currentTarget);
+                        if (e.target === e.currentTarget) {
                             onClose();
-                        }}
-                        className="text-gray-500 hover:text-gray-700 text-2xl focus:outline-none focus:ring-2 focus:ring-gray-500 pointer-events-auto"
-                        aria-label="Close modal"
-                    >
-                        &times;
-                    </button>
+                        }
+                    }}
+                />
+                <div
+                    className="fixed bg-white/95 p-6 rounded-lg max-w-md w-full mx-4 max-h-[80vh] overflow-y-auto z-[100003]"
+                    style={{
+                        pointerEvents: 'auto',
+                        userSelect: 'text',
+                        top: '50%',
+                        left: '50%',
+                        transform: 'translate(-50%, -50%)',
+                    }}
+                    onClick={(e) => {
+                        console.log('Modal content clicked');
+                        e.stopPropagation();
+                    }}
+                >
+                    <div className="flex justify-between items-center mb-4">
+                        <h2 className="text-xl font-bold text-gray-800" style={{ userSelect: 'text' }}>
+                            {tech.name}
+                        </h2>
+                        <button
+                            onClick={(e) => {
+                                console.log('Close button clicked');
+                                e.stopPropagation();
+                                onClose();
+                            }}
+                            className="text-gray-500 hover:text-gray-700 text-2xl focus:outline-none focus:ring-2 focus:ring-gray-500"
+                            style={{ pointerEvents: 'auto', zIndex: 100004 }}
+                            aria-label="Close modal"
+                        >
+                            &times;
+                        </button>
+                    </div>
+                    <div className="space-y-2 text-sm text-gray-700" style={{ userSelect: 'text' }}>
+                        <p><strong>Sector:</strong> {tech.sector}</p>
+                        <p><strong>Trend Cluster:</strong> {tech.trendCluster}</p>
+                        <p><strong>Focus Area:</strong> {tech.focusArea}</p>
+                        <p><strong>Impact:</strong> {tech.impact}%</p>
+                        <p><strong>Timeline:</strong> {tech.timeline} years</p>
+                        <p><strong>Department:</strong> {tech.department}</p>
+                        <p><strong>Supply Chain Stage:</strong> {tech.supplyChainStage}</p>
+                        <p><strong>Trade Channel Type:</strong> {tech.tradeChannelType}</p>
+                        <p><strong>Industry:</strong> {tech.industry}</p>
+                        <p className="mt-4"><strong>Description:</strong> {tech.description}</p>
+                    </div>
                 </div>
-                <div className="space-y-2 text-sm text-gray-700">
-                    <p><strong>Sector:</strong> {tech.sector}</p>
-                    <p><strong>Trend Cluster:</strong> {tech.trendCluster}</p>
-                    <p><strong>Focus Area:</strong> {tech.focusArea}</p>
-                    <p><strong>Impact:</strong> {tech.impact}%</p>
-                    <p><strong>Timeline:</strong> {tech.timeline} years</p>
-                    <p><strong>Department:</strong> {tech.department}</p>
-                    <p><strong>Supply Chain Stage:</strong> {tech.supplyChainStage}</p>
-                    <p><strong>Trade Channel Type:</strong> {tech.tradeChannelType}</p>
-                    <p><strong>Industry:</strong> {tech.industry}</p>
-                    <p className="mt-4"><strong>Description:</strong> {tech.description}</p>
-                </div>
-            </div>
-        </div>
-    );
+            </div>,
+            document.body
+        );
+    };
 
     return (
         <div
             ref={containerRef}
             className={`w-full min-h-[90vh] flex flex-col items-center ${isFullscreen && 'bg-white'} justify-center rounded-lg relative overflow-hidden`}
+            style={{ pointerEvents: modalTech ? 'none' : 'auto' }}
         >
             <div
                 className={`flex items-center justify-between gap-4 ${isFullscreen ? 'mt-28' : 'lg:mt-8 mt-20'} transition-all`}
