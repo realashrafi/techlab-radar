@@ -425,7 +425,7 @@ export function RadarChart({
 
                 const isSelected = selectedTechnology && String(selectedTechnology.id) === String(tech.id);
                 const isHovered = hoveredTechnology && String(hoveredTechnology.id) === String(tech.id);
-                console.log(`Tech: ${tech.name}, isHovered: ${isHovered}, hoveredTechnology: ${hoveredTechnology?.name || 'null'}`);
+                // console.log(`Tech: ${tech.name}, isHovered: ${isHovered}, hoveredTechnology: ${hoveredTechnology?.name || 'null'}`);
 
                 const scale = isSelected ? 1.5 : isHovered ? 1.2 : 1;
                 const alpha = isSelected || isHovered ? 1 : 0.9;
@@ -612,7 +612,7 @@ export function RadarChart({
 
     const handleCanvasClick = (event: React.MouseEvent<HTMLCanvasElement>) => {
         if (!canvasRef.current) return;
-        console.log('Canvas clicked');
+        // console.log('Canvas clicked');
         const rect = canvasRef.current.getBoundingClientRect();
         const x = (event.clientX - rect.left - panOffset.x) / zoomLevel;
         const y = (event.clientY - rect.top - panOffset.y) / zoomLevel;
@@ -622,14 +622,14 @@ export function RadarChart({
             const distance = Math.sqrt((x - pos.x) ** 2 + (y - pos.y) ** 2);
             return distance <= 20 / zoomLevel;
         });
-        console.log('Clicked Tech:', clickedTech);
+        // console.log('Clicked Tech:', clickedTech);
         onTechnologyClick(clickedTech || null);
         setModalTech(clickedTech || null);
         event.stopPropagation();
     };
 
     const closeModal = useCallback(() => {
-        console.log('closeModal called');
+        // console.log('closeModal called');
         setModalTech(null);
         onTechnologyClick(null);
     }, [onTechnologyClick]);
@@ -661,7 +661,7 @@ export function RadarChart({
                 const distance = Math.sqrt((x - pos.x) ** 2 + (y - pos.y) ** 2);
                 return distance <= 20 / zoomLevel;
             });
-            console.log('Hovered Tech:', hoveredTech);
+            // console.log('Hovered Tech:', hoveredTech);
             onTechnologyHover(hoveredTech || null);
             canvasRef.current.style.cursor = hoveredTech ? 'pointer' : isDragging ? 'grabbing' : 'grab';
         },
@@ -678,7 +678,7 @@ export function RadarChart({
     useEffect(() => {
         const handleKeyDown = (event: KeyboardEvent) => {
             if (event.key === 'Escape' && modalTech) {
-                console.log('Esc pressed, closing modal');
+                // console.log('Esc pressed, closing modal');
                 closeModal();
             }
         };
@@ -705,7 +705,7 @@ export function RadarChart({
                         height: '100vh',
                     }}
                     onClick={(e) => {
-                        console.log('Overlay clicked, target:', e.target, 'currentTarget:', e.currentTarget);
+                        // console.log('Overlay clicked, target:', e.target, 'currentTarget:', e.currentTarget);
                         if (e.target === e.currentTarget) {
                             onClose();
                         }
@@ -721,7 +721,7 @@ export function RadarChart({
                         transform: 'translate(-50%, -50%)',
                     }}
                     onClick={(e) => {
-                        console.log('Modal content clicked');
+                        // console.log('Modal content clicked');
                         e.stopPropagation();
                     }}
                 >
@@ -731,7 +731,7 @@ export function RadarChart({
                         </h2>
                         <button
                             onClick={(e) => {
-                                console.log('Close button clicked');
+                                // console.log('Close button clicked');
                                 e.stopPropagation();
                                 onClose();
                             }}

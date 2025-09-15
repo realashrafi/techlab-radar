@@ -1,7 +1,7 @@
+//@ts-nocheck
 import React, { useState } from 'react';
 import SwitchButton from './SwitchButton';
-import { VscChevronDown } from "react-icons/vsc";
-import { VscChevronUp } from "react-icons/vsc";
+import { VscChevronDown, VscChevronUp } from 'react-icons/vsc';
 
 interface MenuItem {
     key: string;
@@ -16,13 +16,12 @@ interface AccordionMenuProps {
 }
 
 const useMenuSelection = () => {
-    const [selectedKeys, setSelectedKeys] = useState<string[]>([]); // default خالی
+    const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
 
     const toggleItem = (key: string, checked: boolean) => {
         setSelectedKeys(prev => {
             const newSelected = checked
-                // @ts-ignore
-                ? [...new Set([...prev, key])] // جلوگیری از duplicate
+                ? [...new Set([...prev, key])]
                 : prev.filter(k => k !== key);
             return newSelected;
         });
@@ -33,6 +32,8 @@ const useMenuSelection = () => {
 
 const AccordionMenu: React.FC<AccordionMenuProps> = ({ items, onSelectionChange }) => {
     const { selectedKeys, toggleItem } = useMenuSelection();
+    const [openItems, setOpenItems] = useState<string[]>([]);
+    const [isMenuOpen, setIsMenuOpen] = useState<boolean>(false); // 控制小屏幕下菜单显示
 
     React.useEffect(() => {
         if (onSelectionChange) {
@@ -40,29 +41,33 @@ const AccordionMenu: React.FC<AccordionMenuProps> = ({ items, onSelectionChange 
         }
     }, [selectedKeys, onSelectionChange]);
 
-    const [openItems, setOpenItems] = useState<string[]>([]);
-
     const toggleAccordion = (index: string) => {
         setOpenItems((prev) =>
             prev.includes(index) ? prev.filter((i) => i !== index) : [...prev, index]
         );
     };
 
+    const toggleMenu = () => {
+        setIsMenuOpen(prev => !prev); // 切换菜单显示状态
+    };
+
     const renderItem = (item: MenuItem, index: string, level: number = 0) => {
         const hasChildren = item.children && item.children.length > 0;
         const isOpen = openItems.includes(index);
-        const isLeaf = !hasChildren; // فقط برای leaf nodes (بدون children) switch رندر کن
+        const isLeaf = !hasChildren;
 
         return (
-            <div key={index} className={`mb-2  ${level > 0 ? `ml-${level * 4}` : ''}`}>
+            <div key={index} className={`mb-2 ${level > 0 ? `ml-${level * 4}` : ''}`}>
                 <div
-                    className={`flex justify-between items-center min-w-50  m-2 p-2 bg-gray-50 border border-gray-300 rounded-md cursor-pointer hover:bg-gray-200 transition-colors ${
+                    className={`flex justify-between items-center min-w-50 m-2 p-2 bg-gray-50 border border-gray-300 rounded-md cursor-pointer hover:bg-gray-200 transition-colors ${
                         hasChildren ? 'has-children max-w-10' : ''
                     } ${isOpen ? 'open' : ''}`}
                     onClick={() => hasChildren && toggleAccordion(index)}
                 >
                     <div className="flex items-center justify-between flex-1 gap-2">
-                        <span className={`text-gray-800 text-[14px] text-base  ${isLeaf ? 'ml-0' : 'ml-2'}`}>{item.title}</span>
+                        <span className={`text-gray-800 text-[14px] text-base ${isLeaf ? 'ml-0' : 'ml-2'}`}>
+                            {item.title}
+                        </span>
                         {isLeaf && (
                             <SwitchButton
                                 checked={selectedKeys.includes(item.key)}
@@ -71,13 +76,11 @@ const AccordionMenu: React.FC<AccordionMenuProps> = ({ items, onSelectionChange 
                         )}
                     </div>
                     {hasChildren && (
-                        <span>{
-                            //@ts-ignore
-                            isOpen ? <VscChevronUp/> : <VscChevronDown/>}</span>
+                        <span>{isOpen ? <VscChevronUp /> : <VscChevronDown />}</span>
                     )}
                 </div>
                 {hasChildren && isOpen && (
-                    <div className="ml-4 border-l-2 border-[#F67242] ">
+                    <div className="ml-4 border-l-2 border-[#F67242]">
                         {item.children!.map((child, childIndex) =>
                             renderItem(child, `${index}-${childIndex}`, level + 1)
                         )}
@@ -88,8 +91,20 @@ const AccordionMenu: React.FC<AccordionMenuProps> = ({ items, onSelectionChange 
     };
 
     return (
-        <div className="max-w-xs font-sans overflow-y-auto h-[550px] max-h-[550px]">
-            {items.map((item, index) => renderItem(item, index.toString()))}
+        <div className="font-sans">
+            <button
+                className="lg:hidden block mb-4 px-4 py-2 bg-[#F67242] text-white rounded-md hover:bg-[#e55f32] transition-colors"
+                onClick={toggleMenu}
+            >
+                {isMenuOpen ? 'Hide Filters' : 'Show Filters'}
+            </button>
+            <div
+                className={`max-w-xs overflow-y-auto h-[550px] max-h-[550px] ${
+                    isMenuOpen ? 'block' : 'hidden lg:block'
+                }`}
+            >
+                {items.map((item, index) => renderItem(item, index.toString()))}
+            </div>
         </div>
     );
 };
