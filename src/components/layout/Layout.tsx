@@ -1,5 +1,6 @@
 import React from 'react';
 import {ReactComponent as Logo} from "../lib/logo.svg";
+import {GridBackgroundDemo} from "../tools/GridBackgroundDemo";
 
 function Layout({children}: { children: React.ReactNode }) {
     return (
@@ -13,7 +14,9 @@ function Layout({children}: { children: React.ReactNode }) {
                     <span className={'text-[11px]'}>Trends in Iran 1404</span>
                 </div>
             </div>
-            {children}
+            <GridBackgroundDemo>
+                {children}
+            </GridBackgroundDemo>
         </div>
     );
 }
