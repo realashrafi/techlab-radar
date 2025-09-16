@@ -241,7 +241,7 @@ export function RadarChart({
         ctx.scale(dpr, dpr);
 
         const backgroundImage = new Image();
-        backgroundImage.src = '/iran.jpg';
+        backgroundImage.src = '/iran2.jpeg';
 
         const renderRadar = () => {
             ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr);
