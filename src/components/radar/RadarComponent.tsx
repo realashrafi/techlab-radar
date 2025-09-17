@@ -1,3 +1,4 @@
+
 //@ts-nocheck
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { RiFullscreenLine, RiFullscreenExitLine } from 'react-icons/ri';
@@ -19,16 +20,16 @@ interface RadarChartProps {
 }
 
 export function RadarChart({
-                               technologies,
-                               onTechnologyHover,
-                               onTechnologyClick,
-                               selectedTechnology,
-                               hoveredTechnology,
-                               needleEnabled = true,
-                               zoomLevel: externalZoomLevel = 1,
-                               panOffset: externalPanOffset = { x: 0, y: 0 },
-                               onPanChange,
-                           }: RadarChartProps) {
+    technologies,
+    onTechnologyHover,
+    onTechnologyClick,
+    selectedTechnology,
+    hoveredTechnology,
+    needleEnabled = true,
+    zoomLevel: externalZoomLevel = 1,
+    panOffset: externalPanOffset = { x: 0, y: 0 },
+    onPanChange,
+}: RadarChartProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const animationRef = useRef<number>(0);
@@ -45,7 +46,7 @@ export function RadarChart({
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [lastPinchDistance, setLastPinchDistance] = useState<number | null>(null);
     const [techPositions, setTechPositions] = useState<Record<string, { x: number; y: number }>>({});
-    const [labelPositions, setLabelPositions] = useState<Record<string, { x: number; y: number }>>({});
+    const [labelPositions, setLabelPositions] = useState<Record<string, { x: number; y: number; lineStartX: number; lineStartY: number }>>({});
 
     // به‌روزرسانی ابعاد با پشتیبانی از حالت تمام‌صفحه
     useEffect(() => {
@@ -257,85 +258,93 @@ export function RadarChart({
         handleZoom(-0.1, centerX, centerY);
     };
 
-    // Helper function برای جلوگیری از تداخل لیبل‌ها
     const placeLabelWithCollision = (
         ctx: CanvasRenderingContext2D,
-        pointX: number,
-        pointY: number,
-        angleRad: number,
-        maxRadius: number,
-        text: string,
-        scale: number,
-        occupiedLabels: { x: number; y: number; width: number; height: number }[]
+        pointX: number, pointY: number, angleRad: number, maxRadius: number,
+        text: string, scale: number, occupiedLabels: any[], isHovered: boolean, isSelected: boolean
     ) => {
-        let baseLabelOffset = 20 * scale;
-        let labelX = pointX + Math.cos(angleRad) * baseLabelOffset;
-        let labelY = pointY + Math.sin(angleRad) * baseLabelOffset;
-
-        const lineStartOffset = 8 * scale;
-        const lineStartX = pointX + Math.cos(angleRad) * lineStartOffset;
-        const lineStartY = pointY + Math.sin(angleRad) * lineStartOffset;
-
+        const baseScale = 1; // همیشه base scale=1 برای محاسبه موقعیت (بدون hover effect)
+        const baseOffset = 20 * baseScale;
         const textMetrics = ctx.measureText(text);
-        const textWidth = textMetrics.width;
-        const textHeight = scale > 1 ? 14 : scale > 1.2 ? 13 : 12;
-        const backgroundPadding = scale > 1 ? 3 : 2;
+        let textWidth = textMetrics.width;
+        let textHeight = baseScale > 1 ? 14 : baseScale > 1.2 ? 13 : 12;
+        const padding = baseScale > 1 ? 3 : 2;
+        let boxWidth = textWidth + padding * 2 + 4;
+        let boxHeight = textHeight + 2 + 4;
 
-        let box: { x: number; y: number; width: number; height: number } = {
-            x: labelX - textWidth / 2 - backgroundPadding,
-            y: labelY - textHeight / 2 - 1,
-            width: textWidth + backgroundPadding * 2 + 4,
-            height: textHeight + 2 + 4,
-        };
+        const candidates: any[] = [];
 
-        let overlap = false;
-        for (let existingBox of occupiedLabels) {
-            const dx = Math.abs(box.x - existingBox.x);
-            const dy = Math.abs(box.y - existingBox.y);
-            if (dx < (box.width + existingBox.width) / 2 && dy < (box.height + existingBox.height) / 2) {
-                overlap = true;
+        // ۸ جهت + offsets کوچک (۲ سطح در هر جهت برای انعطاف بیشتر)
+        const directions = [
+            { angle: angleRad + Math.PI / 2, name: 'right' },
+            { angle: angleRad - Math.PI / 2, name: 'left' },
+            { angle: angleRad, name: 'top' },
+            { angle: angleRad + Math.PI, name: 'bottom' },
+            { angle: angleRad + 3 * Math.PI / 4, name: 'bottom-left' },
+            { angle: angleRad + Math.PI / 4, name: 'bottom-right' },
+            { angle: angleRad - 3 * Math.PI / 4, name: 'top-left' },
+            { angle: angleRad - Math.PI / 4, name: 'top-right' },
+        ];
+
+        directions.forEach(dir => {
+            for (let offsetLevel = 0; offsetLevel < 2; offsetLevel++) { // ۲ سطح offset
+                const offset = baseOffset + offsetLevel * 10;
+                let labelX = pointX + Math.cos(dir.angle) * offset;
+                let labelY = pointY + Math.sin(dir.angle) * offset;
+                let lineStartX = pointX;
+                let lineStartY = pointY;
+                let score = calculateOverlapScore({ x: labelX - textWidth/2 - padding, y: labelY - textHeight/2 - 1, width: boxWidth, height: boxHeight }, occupiedLabels);
+                candidates.push({ labelX, labelY, lineStartX, lineStartY, score, dir: dir.name });
+            }
+        });
+
+        // radial out فقط اگه همه جهت‌ها overlap > threshold
+        const radialOffset = baseOffset + 25 * baseScale;
+        let labelX = pointX + Math.cos(angleRad) * radialOffset;
+        let labelY = pointY + Math.sin(angleRad) * radialOffset;
+        let lineStartX = pointX + Math.cos(angleRad) * (radialOffset - 12 * baseScale);
+        let lineStartY = pointY + Math.sin(angleRad) * (radialOffset - 12 * baseScale);
+        let score = calculateOverlapScore({ x: labelX - textWidth/2 - padding, y: labelY - textHeight/2 - 1, width: boxWidth, height: boxHeight }, occupiedLabels);
+        candidates.push({ labelX, labelY, lineStartX, lineStartY, score, dir: 'radial' });
+
+        let best = candidates.sort((a, b) => a.score - b.score)[0];
+
+        // اگه score > threshold (5)، فونت کم کن یا reject (fallback به radial)
+        const overlapThreshold = 5;
+        let attempts = 0;
+        while (best.score > overlapThreshold && attempts < 5) {
+            attempts++;
+            textHeight *= 0.85; // کم کردن بیشتر
+            boxHeight = textHeight + 2 + 4;
+            const newScore = calculateOverlapScore({ x: best.labelX - textWidth/2 - padding, y: best.labelY - textHeight/2 - 1, width: boxWidth, height: boxHeight }, occupiedLabels);
+            if (newScore < best.score) {
+                best.score = newScore;
+            } else {
+                // fallback به radial اگه نشد
+                best = candidates.find(c => c.dir === 'radial') || best;
                 break;
             }
         }
 
-        if (overlap) {
-            let attempts = 0;
-            while (overlap && attempts < 5) {
-                attempts++;
-                if (attempts <= 3) {
-                    const radialOffset = baseLabelOffset + attempts * 30 * scale;
-                    if (radialOffset > maxRadius + 20) {
-                        break;
-                    }
-                    labelX = pointX + Math.cos(angleRad) * radialOffset;
-                    labelY = pointY + Math.sin(angleRad) * radialOffset;
-                } else {
-                    const verticalShift = (attempts - 3) * 15 * scale * (Math.sin(angleRad) > 0 ? 1 : -1);
-                    labelY += verticalShift;
-                }
+        const box = { x: best.labelX - textWidth/2 - padding, y: best.labelY - textHeight/2 - 1, width: boxWidth, height: boxHeight };
+        occupiedLabels.push(box);
 
-                box = {
-                    x: labelX - textWidth / 2 - backgroundPadding,
-                    y: labelY - textHeight / 2 - 1,
-                    width: textWidth + backgroundPadding * 2 + 4,
-                    height: textHeight + 2 + 4,
-                };
+        return { labelX: best.labelX, labelY: best.labelY, lineStartX: best.lineStartX, lineStartY: best.lineStartY, box, score: best.score };
+    };
 
-                overlap = false;
-                for (let existingBox of occupiedLabels) {
-                    const dx = Math.abs(box.x - existingBox.x);
-                    const dy = Math.abs(box.y - existingBox.y);
-                    if (dx < (box.width + existingBox.width) / 2 && dy < (box.height + existingBox.height) / 2) {
-                        overlap = true;
-                        break;
-                    }
-                }
+    function calculateOverlapScore(newBox: any, occupied: any[]) {
+        let score = 0;
+        for (let existing of occupied) {
+            const dx = Math.abs(newBox.x - existing.x);
+            const dy = Math.abs(newBox.y - existing.y);
+            const overlapX = Math.max(0, (newBox.width / 2 + existing.width / 2) - dx);
+            const overlapY = Math.max(0, (newBox.height / 2 + existing.height / 2) - dy);
+            if (overlapX > 0 && overlapY > 0) {
+                score += (overlapX * overlapY) / 50; // penalize سخت‌تر
             }
         }
-
-        occupiedLabels.push(box);
-        return { labelX, labelY, lineStartX, lineStartY, box };
-    };
+        return score;
+    }
 
     useEffect(() => {
         if (!canvasRef.current || dimensions.width === 0 || dimensions.height === 0) return;
@@ -514,8 +523,14 @@ export function RadarChart({
             const startRadarAngle = 150;
 
             const newPositions: Record<string, { x: number; y: number }> = {};
-            const labelBoxes: { x: number; y: number; width: number; height: number }[] = [];
-            technologies.forEach((tech) => {
+            const occupiedLabels: { x: number; y: number; width: number; height: number }[] = [];
+
+            // Sort technologies by angle for sequential placement
+            const sortedTechnologies = [...technologies].sort((a, b) => 
+                (startRadarAngle + (a.impact / 100) * arcSpan) - (startRadarAngle + (b.impact / 100) * arcSpan)
+            );
+
+            sortedTechnologies.forEach((tech) => {
                 const impactAngle = startRadarAngle + (tech.impact / 100) * arcSpan;
                 let radarAngle = impactAngle;
 
@@ -535,13 +550,13 @@ export function RadarChart({
                 const isSelected = selectedTechnology && String(selectedTechnology.id) === String(tech.id);
                 const isHovered = hoveredTechnology && String(hoveredTechnology.id) === String(tech.id);
 
-                const scale = isSelected ? 1.5 : isHovered ? 1.2 : 1;
-                const alpha = isSelected || isHovered ? 1 : 0.9;
+                const baseScale = 1; // base برای position
+                const visualScale = isSelected ? 1.5 : isHovered ? 1.2 : 1; // فقط برای visual
 
                 ctx.save();
-                ctx.globalAlpha = alpha;
+                ctx.globalAlpha = isSelected || isHovered ? 1 : 0.9;
                 ctx.beginPath();
-                ctx.arc(x, y, 6 * scale, 0, 2 * Math.PI);
+                ctx.arc(x, y, 6 * visualScale, 0, 2 * Math.PI);
                 ctx.fillStyle = '#FFFFFF';
                 ctx.fill();
                 ctx.strokeStyle = '#17A398';
@@ -550,44 +565,43 @@ export function RadarChart({
 
                 if (isSelected || isHovered) {
                     ctx.beginPath();
-                    ctx.arc(x, y, 12 * scale, 0, 2 * Math.PI);
+                    ctx.arc(x, y, 12 * visualScale, 0, 2 * Math.PI);
                     ctx.fillStyle = '#17A398';
                     ctx.globalAlpha = 0.2;
                     ctx.fill();
                 }
 
-                let { labelX, labelY, lineStartX, lineStartY } = placeLabelWithCollision(
-                    ctx,
-                    x, y,
-                    canvasAngle,
-                    maxRadius,
-                    tech.name,
-                    scale,
-                    labelBoxes
+                // محاسبه موقعیت base (بدون scale visual)
+                let { labelX, labelY, lineStartX, lineStartY, score } = placeLabelWithCollision(
+                    ctx, x, y, canvasAngle, maxRadius, tech.name, baseScale, occupiedLabels, isHovered, isSelected
                 );
 
-                if (labelPositions[tech.id]) {
-                    labelX = labelPositions[tech.id].x;
-                    labelY = labelPositions[tech.id].y;
-                } else {
-                    labelPositions[tech.id] = { x: labelX, y: labelY };
-                    setLabelPositions({ ...labelPositions });
+                // Cache موقعیت base
+                const cachedPos = labelPositions[tech.id] || { x: labelX, y: labelY, lineStartX, lineStartY };
+                labelX = cachedPos.x;
+                labelY = cachedPos.y;
+                lineStartX = cachedPos.lineStartX;
+                lineStartY = cachedPos.lineStartY;
+                if (!labelPositions[tech.id]) {
+                    setLabelPositions(prev => ({ ...prev, [tech.id]: { x: labelX, y: labelY, lineStartX, lineStartY } }));
                 }
 
-                ctx.globalAlpha = isHovered ? 1 : 0.6;
-                ctx.strokeStyle = isHovered ? '#17A398' : '#B8D4E3';
-                ctx.lineWidth = isHovered ? 2 : 1;
+                // رندر خط همیشه (با opacity ثابت)
+                ctx.globalAlpha = 0.6; // opacity ثابت برای همه حالات
+                ctx.strokeStyle = isHovered ? '#17A398' : '#B8D4E3'; // رنگ تغییر کنه تو hover
+                ctx.lineWidth = isHovered ? 2 : 1; // ضخامت تغییر کنه تو hover
                 ctx.beginPath();
                 ctx.moveTo(lineStartX, lineStartY);
                 ctx.lineTo(labelX, labelY);
                 ctx.stroke();
 
+                // رندر باکس و متن با visual scale (بدون تغییر موقعیت)
                 const textMetrics = ctx.measureText(tech.name);
-                const textWidth = textMetrics.width;
-                const textHeight = scale > 1 ? 14 : scale > 1.2 ? 13 : 12;
-                const backgroundAlpha = isSelected ? 0.9 : isHovered ? 0.85 : 0.7;
-                const backgroundPadding = scale > 1 ? 3 : 2;
+                const textWidth = textMetrics.width * (visualScale / baseScale); // scale متن
+                const textHeight = (baseScale > 1 ? 14 : baseScale > 1.2 ? 13 : 12) * (visualScale / baseScale);
+                const backgroundPadding = (baseScale > 1 ? 3 : 2) * (visualScale / baseScale);
 
+                const backgroundAlpha = isSelected ? 0.9 : isHovered ? 0.85 : 0.7;
                 ctx.globalAlpha = backgroundAlpha;
                 ctx.fillStyle = '#FFFFFF';
                 ctx.beginPath();
@@ -603,7 +617,9 @@ export function RadarChart({
 
                 ctx.globalAlpha = 1;
                 ctx.fillStyle = isSelected ? '#17A398' : isHovered ? '#2E2E2E' : '#2E2E2E';
-                ctx.font = `${isSelected || isHovered ? 'bold' : 'normal'} ${scale > 1 ? '12px' : scale > 1.2 ? '11px' : '10px'} Inter, sans-serif`;
+                ctx.font = `${isSelected || isHovered ? 'bold ' : ''}${textHeight}px Inter, sans-serif`; // scale فونت
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
                 ctx.fillText(tech.name, labelX, labelY);
 
                 ctx.restore();
@@ -718,7 +734,7 @@ export function RadarChart({
             const distance = Math.sqrt((x - pos.x) ** 2 + (y - pos.y) ** 2);
             return distance <= 20 / zoomLevel;
         });
-        console.log('Clicked tech:', clickedTech); // دیباگ
+        console.log('Clicked tech:', clickedTech);
         onTechnologyClick(clickedTech || null);
         setModalTech(clickedTech || null);
         event.stopPropagation();
