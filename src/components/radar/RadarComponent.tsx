@@ -1,6 +1,5 @@
 //@ts-nocheck
 import React, { useRef, useEffect, useState, useCallback } from 'react';
-import { createPortal } from 'react-dom';
 import { RiFullscreenLine, RiFullscreenExitLine } from 'react-icons/ri';
 import { FiZoomIn, FiZoomOut, FiRefreshCw } from 'react-icons/fi';
 import { menuItems, Technology } from '../lib/data';
@@ -46,8 +45,9 @@ export function RadarChart({
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [lastPinchDistance, setLastPinchDistance] = useState<number | null>(null);
     const [techPositions, setTechPositions] = useState<Record<string, { x: number; y: number }>>({});
-    const [labelPositions, setLabelPositions] = useState<Record<string, { x: number; y: number }>>({}); // ذخیره موقعیت ثابت لیبل
+    const [labelPositions, setLabelPositions] = useState<Record<string, { x: number; y: number }>>({});
 
+    // به‌روزرسانی ابعاد با پشتیبانی از حالت تمام‌صفحه
     useEffect(() => {
         const updateDimensions = () => {
             if (containerRef.current) {
@@ -60,7 +60,11 @@ export function RadarChart({
         };
         updateDimensions();
         window.addEventListener('resize', updateDimensions);
-        return () => window.removeEventListener('resize', updateDimensions);
+        document.addEventListener('fullscreenchange', updateDimensions);
+        return () => {
+            window.removeEventListener('resize', updateDimensions);
+            document.removeEventListener('fullscreenchange', updateDimensions);
+        };
     }, []);
 
     const animateNeedle = useCallback(() => {
@@ -207,9 +211,33 @@ export function RadarChart({
         if (!containerRef.current) return;
 
         if (!isFullscreen) {
-            containerRef.current.requestFullscreen().then(() => setIsFullscreen(true));
+            containerRef.current.requestFullscreen().then(() => {
+                setIsFullscreen(true);
+                const updateDimensions = () => {
+                    if (containerRef.current) {
+                        const rect = containerRef.current.getBoundingClientRect();
+                        setDimensions({
+                            width: Math.max(rect.width, 300),
+                            height: Math.max(rect.height, 300),
+                        });
+                    }
+                };
+                updateDimensions();
+            });
         } else {
-            document.exitFullscreen().then(() => setIsFullscreen(false));
+            document.exitFullscreen().then(() => {
+                setIsFullscreen(false);
+                const updateDimensions = () => {
+                    if (containerRef.current) {
+                        const rect = containerRef.current.getBoundingClientRect();
+                        setDimensions({
+                            width: Math.max(rect.width, 300),
+                            height: Math.max(rect.height, 300),
+                        });
+                    }
+                };
+                updateDimensions();
+            });
         }
     };
 
@@ -229,7 +257,7 @@ export function RadarChart({
         handleZoom(-0.1, centerX, centerY);
     };
 
-    // Helper function با فاصله 4px بین لیبل‌ها
+    // Helper function برای جلوگیری از تداخل لیبل‌ها
     const placeLabelWithCollision = (
         ctx: CanvasRenderingContext2D,
         pointX: number,
@@ -256,8 +284,8 @@ export function RadarChart({
         let box: { x: number; y: number; width: number; height: number } = {
             x: labelX - textWidth / 2 - backgroundPadding,
             y: labelY - textHeight / 2 - 1,
-            width: textWidth + backgroundPadding * 2 + 4, // اضافه کردن 4px فاصله
-            height: textHeight + 2 + 4 // اضافه کردن 4px فاصله
+            width: textWidth + backgroundPadding * 2 + 4,
+            height: textHeight + 2 + 4,
         };
 
         let overlap = false;
@@ -290,7 +318,7 @@ export function RadarChart({
                     x: labelX - textWidth / 2 - backgroundPadding,
                     y: labelY - textHeight / 2 - 1,
                     width: textWidth + backgroundPadding * 2 + 4,
-                    height: textHeight + 2 + 4
+                    height: textHeight + 2 + 4,
                 };
 
                 overlap = false;
@@ -528,7 +556,6 @@ export function RadarChart({
                     ctx.fill();
                 }
 
-                // استفاده از helper با موقعیت ثابت از labelPositions
                 let { labelX, labelY, lineStartX, lineStartY } = placeLabelWithCollision(
                     ctx,
                     x, y,
@@ -539,7 +566,6 @@ export function RadarChart({
                     labelBoxes
                 );
 
-                // اگر position قبلاً ذخیره شده، از همون استفاده کن
                 if (labelPositions[tech.id]) {
                     labelX = labelPositions[tech.id].x;
                     labelY = labelPositions[tech.id].y;
@@ -548,10 +574,9 @@ export function RadarChart({
                     setLabelPositions({ ...labelPositions });
                 }
 
-                // leader line با پررنگ شدن موقع hover
-                ctx.globalAlpha = isHovered ? 1 : 0.6; // پررنگ‌تر موقع hover
-                ctx.strokeStyle = isHovered ? '#17A398' : '#B8D4E3'; // رنگ پررنگ‌تر
-                ctx.lineWidth = isHovered ? 2 : 1; // ضخامت بیشتر
+                ctx.globalAlpha = isHovered ? 1 : 0.6;
+                ctx.strokeStyle = isHovered ? '#17A398' : '#B8D4E3';
+                ctx.lineWidth = isHovered ? 2 : 1;
                 ctx.beginPath();
                 ctx.moveTo(lineStartX, lineStartY);
                 ctx.lineTo(labelX, labelY);
@@ -693,6 +718,7 @@ export function RadarChart({
             const distance = Math.sqrt((x - pos.x) ** 2 + (y - pos.y) ** 2);
             return distance <= 20 / zoomLevel;
         });
+        console.log('Clicked tech:', clickedTech); // دیباگ
         onTechnologyClick(clickedTech || null);
         setModalTech(clickedTech || null);
         event.stopPropagation();
@@ -754,16 +780,16 @@ export function RadarChart({
     }, [modalTech, closeModal]);
 
     const Modal = ({ tech, onClose }: { tech: Technology; onClose: () => void }) => {
-        return createPortal(
+        return (
             <div
-                className="fixed inset-0 z-[100001]"
+                className="fixed inset-0 z-[999999]"
                 style={{
                     pointerEvents: 'auto',
                     userSelect: 'none',
                 }}
             >
                 <div
-                    className="fixed inset-0 bg-black/50 backdrop-blur-[2px] z-[100002]"
+                    className="fixed inset-0 bg-black/50 backdrop-blur-[2px] z-[999999]"
                     style={{
                         pointerEvents: 'auto',
                         top: 0,
@@ -778,7 +804,7 @@ export function RadarChart({
                     }}
                 />
                 <div
-                    className="fixed bg-white/95 p-6 rounded-lg max-w-md w-full mx-4 max-h-[80vh] overflow-y-auto z-[100003]"
+                    className="fixed bg-white/95 p-6 rounded-lg max-w-md w-full mx-4 max-h-[80vh] overflow-y-auto z-[1000000]"
                     style={{
                         pointerEvents: 'auto',
                         userSelect: 'text',
@@ -800,7 +826,7 @@ export function RadarChart({
                                 onClose();
                             }}
                             className="text-gray-500 hover:text-gray-700 text-2xl focus:outline-none focus:ring-2 focus:ring-gray-500"
-                            style={{ pointerEvents: 'auto', zIndex: 100004 }}
+                            style={{ pointerEvents: 'auto', zIndex: 1000001 }}
                             aria-label="Close modal"
                         >
                             &times;
@@ -819,16 +845,15 @@ export function RadarChart({
                         <p className="mt-4"><strong>Description:</strong> {tech.description}</p>
                     </div>
                 </div>
-            </div>,
-            document.body
+            </div>
         );
     };
 
     return (
         <div
             ref={containerRef}
-            className={`w-full min-h-[90vh] flex flex-col items-center ${isFullscreen && 'bg-white'} justify-center rounded-lg relative overflow-hidden`}
-            style={{ pointerEvents: modalTech ? 'none' : 'auto' }}
+            className={`w-full min-h-[90vh] flex flex-col items-center ${isFullscreen ? 'bg-white' : ''} justify-center rounded-lg relative overflow-hidden`}
+            style={{ position: 'relative' }}
         >
             <div
                 className={`flex items-center justify-between gap-4 ${isFullscreen ? 'mt-28' : 'lg:mt-8 mt-20'} transition-all`}
