@@ -46,6 +46,7 @@ export function RadarChart({
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [lastPinchDistance, setLastPinchDistance] = useState<number | null>(null);
     const [techPositions, setTechPositions] = useState<Record<string, { x: number; y: number }>>({});
+    const [labelPositions, setLabelPositions] = useState<Record<string, { x: number; y: number }>>({}); // ذخیره موقعیت ثابت لیبل
 
     useEffect(() => {
         const updateDimensions = () => {
@@ -228,6 +229,86 @@ export function RadarChart({
         handleZoom(-0.1, centerX, centerY);
     };
 
+    // Helper function با فاصله 4px بین لیبل‌ها
+    const placeLabelWithCollision = (
+        ctx: CanvasRenderingContext2D,
+        pointX: number,
+        pointY: number,
+        angleRad: number,
+        maxRadius: number,
+        text: string,
+        scale: number,
+        occupiedLabels: { x: number; y: number; width: number; height: number }[]
+    ) => {
+        let baseLabelOffset = 20 * scale;
+        let labelX = pointX + Math.cos(angleRad) * baseLabelOffset;
+        let labelY = pointY + Math.sin(angleRad) * baseLabelOffset;
+
+        const lineStartOffset = 8 * scale;
+        const lineStartX = pointX + Math.cos(angleRad) * lineStartOffset;
+        const lineStartY = pointY + Math.sin(angleRad) * lineStartOffset;
+
+        const textMetrics = ctx.measureText(text);
+        const textWidth = textMetrics.width;
+        const textHeight = scale > 1 ? 14 : scale > 1.2 ? 13 : 12;
+        const backgroundPadding = scale > 1 ? 3 : 2;
+
+        let box: { x: number; y: number; width: number; height: number } = {
+            x: labelX - textWidth / 2 - backgroundPadding,
+            y: labelY - textHeight / 2 - 1,
+            width: textWidth + backgroundPadding * 2 + 4, // اضافه کردن 4px فاصله
+            height: textHeight + 2 + 4 // اضافه کردن 4px فاصله
+        };
+
+        let overlap = false;
+        for (let existingBox of occupiedLabels) {
+            const dx = Math.abs(box.x - existingBox.x);
+            const dy = Math.abs(box.y - existingBox.y);
+            if (dx < (box.width + existingBox.width) / 2 && dy < (box.height + existingBox.height) / 2) {
+                overlap = true;
+                break;
+            }
+        }
+
+        if (overlap) {
+            let attempts = 0;
+            while (overlap && attempts < 5) {
+                attempts++;
+                if (attempts <= 3) {
+                    const radialOffset = baseLabelOffset + attempts * 30 * scale;
+                    if (radialOffset > maxRadius + 20) {
+                        break;
+                    }
+                    labelX = pointX + Math.cos(angleRad) * radialOffset;
+                    labelY = pointY + Math.sin(angleRad) * radialOffset;
+                } else {
+                    const verticalShift = (attempts - 3) * 15 * scale * (Math.sin(angleRad) > 0 ? 1 : -1);
+                    labelY += verticalShift;
+                }
+
+                box = {
+                    x: labelX - textWidth / 2 - backgroundPadding,
+                    y: labelY - textHeight / 2 - 1,
+                    width: textWidth + backgroundPadding * 2 + 4,
+                    height: textHeight + 2 + 4
+                };
+
+                overlap = false;
+                for (let existingBox of occupiedLabels) {
+                    const dx = Math.abs(box.x - existingBox.x);
+                    const dy = Math.abs(box.y - existingBox.y);
+                    if (dx < (box.width + existingBox.width) / 2 && dy < (box.height + existingBox.height) / 2) {
+                        overlap = true;
+                        break;
+                    }
+                }
+            }
+        }
+
+        occupiedLabels.push(box);
+        return { labelX, labelY, lineStartX, lineStartY, box };
+    };
+
     useEffect(() => {
         if (!canvasRef.current || dimensions.width === 0 || dimensions.height === 0) return;
 
@@ -405,7 +486,7 @@ export function RadarChart({
             const startRadarAngle = 150;
 
             const newPositions: Record<string, { x: number; y: number }> = {};
-            const labelBoxes = []; // برای تشخیص overlap
+            const labelBoxes: { x: number; y: number; width: number; height: number }[] = [];
             technologies.forEach((tech) => {
                 const impactAngle = startRadarAngle + (tech.impact / 100) * arcSpan;
                 let radarAngle = impactAngle;
@@ -425,7 +506,6 @@ export function RadarChart({
 
                 const isSelected = selectedTechnology && String(selectedTechnology.id) === String(tech.id);
                 const isHovered = hoveredTechnology && String(hoveredTechnology.id) === String(tech.id);
-                // console.log(`Tech: ${tech.name}, isHovered: ${isHovered}, hoveredTechnology: ${hoveredTechnology?.name || 'null'}`);
 
                 const scale = isSelected ? 1.5 : isHovered ? 1.2 : 1;
                 const alpha = isSelected || isHovered ? 1 : 0.9;
@@ -448,53 +528,45 @@ export function RadarChart({
                     ctx.fill();
                 }
 
-                // محاسبه offset پویا برای جلوگیری از overlap
-                const baseLabelOffset = 15 * scale;
-                let labelOffset = baseLabelOffset;
-                const angleRad = canvasAngle;
-                const labelX = x + Math.cos(angleRad) * labelOffset;
-                const labelY = y + Math.sin(angleRad) * labelOffset;
+                // استفاده از helper با موقعیت ثابت از labelPositions
+                let { labelX, labelY, lineStartX, lineStartY } = placeLabelWithCollision(
+                    ctx,
+                    x, y,
+                    canvasAngle,
+                    maxRadius,
+                    tech.name,
+                    scale,
+                    labelBoxes
+                );
+
+                // اگر position قبلاً ذخیره شده، از همون استفاده کن
+                if (labelPositions[tech.id]) {
+                    labelX = labelPositions[tech.id].x;
+                    labelY = labelPositions[tech.id].y;
+                } else {
+                    labelPositions[tech.id] = { x: labelX, y: labelY };
+                    setLabelPositions({ ...labelPositions });
+                }
+
+                // leader line با پررنگ شدن موقع hover
+                ctx.globalAlpha = isHovered ? 1 : 0.6; // پررنگ‌تر موقع hover
+                ctx.strokeStyle = isHovered ? '#17A398' : '#B8D4E3'; // رنگ پررنگ‌تر
+                ctx.lineWidth = isHovered ? 2 : 1; // ضخامت بیشتر
+                ctx.beginPath();
+                ctx.moveTo(lineStartX, lineStartY);
+                ctx.lineTo(labelX, labelY);
+                ctx.stroke();
+
                 const textMetrics = ctx.measureText(tech.name);
                 const textWidth = textMetrics.width;
-                const textHeight = isSelected ? 14 : isHovered ? 13 : 12;
+                const textHeight = scale > 1 ? 14 : scale > 1.2 ? 13 : 12;
                 const backgroundAlpha = isSelected ? 0.9 : isHovered ? 0.85 : 0.7;
-                const backgroundPadding = isSelected || isHovered ? 3 : 2;
-
-                // تنظیم offset بر اساس زاویه برای توزیع بهتر labelها
-                if (Math.abs(Math.sin(angleRad)) < 0.5) {
-                    // اگر زاویه افقی باشه، label رو کمی بالاتر/پایین‌تر بذار
-                    labelOffset = baseLabelOffset + (Math.sin(angleRad) * 5);
-                } else {
-                    // اگر زاویه عمودی باشه، label رو کمی چپ/راست بذار
-                    labelOffset = baseLabelOffset + (Math.cos(angleRad) * 3);
-                }
-
-                const adjustedLabelX = x + Math.cos(angleRad) * labelOffset;
-                const adjustedLabelY = y + Math.sin(angleRad) * labelOffset;
-
-                // تشخیص overlap ساده: اگر label جدید با labelهای قبلی overlap داشته باشه، offset رو افزایش بده
-                let overlap = false;
-                for (let existingBox of labelBoxes) {
-                    const dx = Math.abs(adjustedLabelX - existingBox.x);
-                    const dy = Math.abs(adjustedLabelY - existingBox.y);
-                    if (dx < textWidth + existingBox.width && dy < textHeight + existingBox.height) {
-                        overlap = true;
-                        break;
-                    }
-                }
-
-                if (overlap) {
-                    labelOffset += 10; // افزایش offset برای جلوگیری از overlap
-                    const newLabelX = x + Math.cos(angleRad) * labelOffset;
-                    const newLabelY = y + Math.sin(angleRad) * labelOffset;
-                } else {
-                    labelBoxes.push({ x: adjustedLabelX - textWidth / 2, y: adjustedLabelY - textHeight / 2, width: textWidth + backgroundPadding * 2, height: textHeight + 2 });
-                }
+                const backgroundPadding = scale > 1 ? 3 : 2;
 
                 ctx.globalAlpha = backgroundAlpha;
                 ctx.fillStyle = '#FFFFFF';
                 ctx.beginPath();
-                ctx.roundRect(adjustedLabelX - textWidth / 2 - backgroundPadding, adjustedLabelY - textHeight / 2 - 1, textWidth + backgroundPadding * 2, textHeight + 2, 4); // border-radius 4px
+                ctx.roundRect(labelX - textWidth / 2 - backgroundPadding, labelY - textHeight / 2 - 1, textWidth + backgroundPadding * 2, textHeight + 2, 4);
                 ctx.fill();
 
                 if (isSelected || isHovered) {
@@ -506,8 +578,8 @@ export function RadarChart({
 
                 ctx.globalAlpha = 1;
                 ctx.fillStyle = isSelected ? '#17A398' : isHovered ? '#2E2E2E' : '#2E2E2E';
-                ctx.font = `${isSelected || isHovered ? 'bold' : 'normal'} ${isSelected ? '12px' : isHovered ? '11px' : '10px'} Inter, sans-serif`;
-                ctx.fillText(tech.name, adjustedLabelX, adjustedLabelY);
+                ctx.font = `${isSelected || isHovered ? 'bold' : 'normal'} ${scale > 1 ? '12px' : scale > 1.2 ? '11px' : '10px'} Inter, sans-serif`;
+                ctx.fillText(tech.name, labelX, labelY);
 
                 ctx.restore();
             });
@@ -612,7 +684,6 @@ export function RadarChart({
 
     const handleCanvasClick = (event: React.MouseEvent<HTMLCanvasElement>) => {
         if (!canvasRef.current) return;
-        // console.log('Canvas clicked');
         const rect = canvasRef.current.getBoundingClientRect();
         const x = (event.clientX - rect.left - panOffset.x) / zoomLevel;
         const y = (event.clientY - rect.top - panOffset.y) / zoomLevel;
@@ -622,14 +693,12 @@ export function RadarChart({
             const distance = Math.sqrt((x - pos.x) ** 2 + (y - pos.y) ** 2);
             return distance <= 20 / zoomLevel;
         });
-        // console.log('Clicked Tech:', clickedTech);
         onTechnologyClick(clickedTech || null);
         setModalTech(clickedTech || null);
         event.stopPropagation();
     };
 
     const closeModal = useCallback(() => {
-        // console.log('closeModal called');
         setModalTech(null);
         onTechnologyClick(null);
     }, [onTechnologyClick]);
@@ -661,7 +730,6 @@ export function RadarChart({
                 const distance = Math.sqrt((x - pos.x) ** 2 + (y - pos.y) ** 2);
                 return distance <= 20 / zoomLevel;
             });
-            // console.log('Hovered Tech:', hoveredTech);
             onTechnologyHover(hoveredTech || null);
             canvasRef.current.style.cursor = hoveredTech ? 'pointer' : isDragging ? 'grabbing' : 'grab';
         },
@@ -678,7 +746,6 @@ export function RadarChart({
     useEffect(() => {
         const handleKeyDown = (event: KeyboardEvent) => {
             if (event.key === 'Escape' && modalTech) {
-                // console.log('Esc pressed, closing modal');
                 closeModal();
             }
         };
@@ -705,7 +772,6 @@ export function RadarChart({
                         height: '100vh',
                     }}
                     onClick={(e) => {
-                        // console.log('Overlay clicked, target:', e.target, 'currentTarget:', e.currentTarget);
                         if (e.target === e.currentTarget) {
                             onClose();
                         }
@@ -721,7 +787,6 @@ export function RadarChart({
                         transform: 'translate(-50%, -50%)',
                     }}
                     onClick={(e) => {
-                        // console.log('Modal content clicked');
                         e.stopPropagation();
                     }}
                 >
@@ -731,7 +796,6 @@ export function RadarChart({
                         </h2>
                         <button
                             onClick={(e) => {
-                                // console.log('Close button clicked');
                                 e.stopPropagation();
                                 onClose();
                             }}
