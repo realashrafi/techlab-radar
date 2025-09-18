@@ -1,4 +1,3 @@
-
 //@ts-nocheck
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { RiFullscreenLine, RiFullscreenExitLine } from 'react-icons/ri';
@@ -20,16 +19,16 @@ interface RadarChartProps {
 }
 
 export function RadarChart({
-    technologies,
-    onTechnologyHover,
-    onTechnologyClick,
-    selectedTechnology,
-    hoveredTechnology,
-    needleEnabled = true,
-    zoomLevel: externalZoomLevel = 1,
-    panOffset: externalPanOffset = { x: 0, y: 0 },
-    onPanChange,
-}: RadarChartProps) {
+                               technologies,
+                               onTechnologyHover,
+                               onTechnologyClick,
+                               selectedTechnology,
+                               hoveredTechnology,
+                               needleEnabled = true,
+                               zoomLevel: externalZoomLevel = 1,
+                               panOffset: externalPanOffset = { x: 0, y: 0 },
+                               onPanChange,
+                           }: RadarChartProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const animationRef = useRef<number>(0);
@@ -274,7 +273,7 @@ export function RadarChart({
 
         const candidates: any[] = [];
 
-        // ۸ جهت + offsets کوچک (۲ سطح در هر جهت برای انعطاف بیشتر)
+        // افزایش به ۱۲ جهت برای دقت بیشتر
         const directions = [
             { angle: angleRad + Math.PI / 2, name: 'right' },
             { angle: angleRad - Math.PI / 2, name: 'left' },
@@ -284,11 +283,15 @@ export function RadarChart({
             { angle: angleRad + Math.PI / 4, name: 'bottom-right' },
             { angle: angleRad - 3 * Math.PI / 4, name: 'top-left' },
             { angle: angleRad - Math.PI / 4, name: 'top-right' },
+            { angle: angleRad + Math.PI / 6, name: 'bottom-right-mid' },
+            { angle: angleRad - Math.PI / 6, name: 'top-right-mid' },
+            { angle: angleRad + 5 * Math.PI / 6, name: 'bottom-left-mid' },
+            { angle: angleRad - 5 * Math.PI / 6, name: 'top-left-mid' },
         ];
 
         directions.forEach(dir => {
-            for (let offsetLevel = 0; offsetLevel < 2; offsetLevel++) { // ۲ سطح offset
-                const offset = baseOffset + offsetLevel * 10;
+            for (let offsetLevel = 0; offsetLevel < 4; offsetLevel++) { // افزایش به ۴ سطح offset برای گزینه‌های بیشتر
+                const offset = baseOffset + offsetLevel * 15; // گام بزرگ‌تر (۱۵ به جای ۱۰)
                 let labelX = pointX + Math.cos(dir.angle) * offset;
                 let labelY = pointY + Math.sin(dir.angle) * offset;
                 let lineStartX = pointX;
@@ -298,32 +301,45 @@ export function RadarChart({
             }
         });
 
-        // radial out فقط اگه همه جهت‌ها overlap > threshold
-        const radialOffset = baseOffset + 25 * baseScale;
-        let labelX = pointX + Math.cos(angleRad) * radialOffset;
-        let labelY = pointY + Math.sin(angleRad) * radialOffset;
-        let lineStartX = pointX + Math.cos(angleRad) * (radialOffset - 12 * baseScale);
-        let lineStartY = pointY + Math.sin(angleRad) * (radialOffset - 12 * baseScale);
-        let score = calculateOverlapScore({ x: labelX - textWidth/2 - padding, y: labelY - textHeight/2 - 1, width: boxWidth, height: boxHeight }, occupiedLabels);
-        candidates.push({ labelX, labelY, lineStartX, lineStartY, score, dir: 'radial' });
+        // radial out با offsets بیشتر
+        for (let radialLevel = 0; radialLevel < 3; radialLevel++) {
+            const radialOffset = baseOffset + 25 * baseScale + radialLevel * 10;
+            let labelX = pointX + Math.cos(angleRad) * radialOffset;
+            let labelY = pointY + Math.sin(angleRad) * radialOffset;
+            let lineStartX = pointX + Math.cos(angleRad) * (radialOffset - 12 * baseScale);
+            let lineStartY = pointY + Math.sin(angleRad) * (radialOffset - 12 * baseScale);
+            let score = calculateOverlapScore({ x: labelX - textWidth/2 - padding, y: labelY - textHeight/2 - 1, width: boxWidth, height: boxHeight }, occupiedLabels);
+            candidates.push({ labelX, labelY, lineStartX, lineStartY, score, dir: 'radial' + radialLevel });
+        }
 
         let best = candidates.sort((a, b) => a.score - b.score)[0];
 
-        // اگه score > threshold (5)، فونت کم کن یا reject (fallback به radial)
-        const overlapThreshold = 5;
+        // سخت‌گیری بیشتر: اگر score > threshold، فونت کم کن یا fallback به radial با offset بیشتر
+        const overlapThreshold = 2; // کاهش threshold برای دقت بیشتر
         let attempts = 0;
         while (best.score > overlapThreshold && attempts < 5) {
             attempts++;
-            textHeight *= 0.85; // کم کردن بیشتر
+            textHeight *= 0.9; // کم کردن کمتر (برای جلوگیری از کوچک شدن بیش از حد)
             boxHeight = textHeight + 2 + 4;
             const newScore = calculateOverlapScore({ x: best.labelX - textWidth/2 - padding, y: best.labelY - textHeight/2 - 1, width: boxWidth, height: boxHeight }, occupiedLabels);
             if (newScore < best.score) {
                 best.score = newScore;
             } else {
-                // fallback به radial اگه نشد
-                best = candidates.find(c => c.dir === 'radial') || best;
+                // fallback به بهترین radial
+                const radialCandidates = candidates.filter(c => c.dir.startsWith('radial'));
+                best = radialCandidates.sort((a, b) => a.score - b.score)[0] || best;
                 break;
             }
+        }
+
+        // مرحله اضافی: اگر هنوز score > 0، موقعیت رو کمی جابجا کن (۵-۱۰ پیکسل در جهت radial)
+        if (best.score > 0) {
+            const adjustOffset = 5 + Math.random() * 5; // random کوچک برای تنوع
+            best.labelX += Math.cos(angleRad) * adjustOffset;
+            best.labelY += Math.sin(angleRad) * adjustOffset;
+            best.lineStartX += Math.cos(angleRad) * (adjustOffset / 2);
+            best.lineStartY += Math.sin(angleRad) * (adjustOffset / 2);
+            best.score = calculateOverlapScore({ x: best.labelX - textWidth/2 - padding, y: best.labelY - textHeight/2 - 1, width: boxWidth, height: boxHeight }, occupiedLabels);
         }
 
         const box = { x: best.labelX - textWidth/2 - padding, y: best.labelY - textHeight/2 - 1, width: boxWidth, height: boxHeight };
@@ -340,7 +356,7 @@ export function RadarChart({
             const overlapX = Math.max(0, (newBox.width / 2 + existing.width / 2) - dx);
             const overlapY = Math.max(0, (newBox.height / 2 + existing.height / 2) - dy);
             if (overlapX > 0 && overlapY > 0) {
-                score += (overlapX * overlapY) / 50; // penalize سخت‌تر
+                score += (overlapX * overlapY) / 100; // penalize سخت‌تر (۱۰۰ به جای ۵۰)
             }
         }
         return score;
@@ -526,10 +542,11 @@ export function RadarChart({
             const occupiedLabels: { x: number; y: number; width: number; height: number }[] = [];
 
             // Sort technologies by angle for sequential placement
-            const sortedTechnologies = [...technologies].sort((a, b) => 
+            const sortedTechnologies = [...technologies].sort((a, b) =>
                 (startRadarAngle + (a.impact / 100) * arcSpan) - (startRadarAngle + (b.impact / 100) * arcSpan)
             );
 
+            // اول محاسبه همه موقعیت‌های نقاط بدون رندر
             sortedTechnologies.forEach((tech) => {
                 const impactAngle = startRadarAngle + (tech.impact / 100) * arcSpan;
                 let radarAngle = impactAngle;
@@ -546,6 +563,27 @@ export function RadarChart({
                 const y = centerY + Math.sin(canvasAngle) * radius;
 
                 newPositions[tech.id] = { x, y };
+            });
+
+            // اضافه کردن نقاط به occupiedLabels به عنوان باکس‌های کوچک (برای جلوگیری از تداخل لیبل با نقاط)
+            Object.values(newPositions).forEach((pos) => {
+                const pointBoxSize = 20; // اندازه باکس اطراف نقطه برای buffer (می‌تونی تنظیم کنی)
+                occupiedLabels.push({
+                    x: pos.x - pointBoxSize / 2,
+                    y: pos.y - pointBoxSize / 2,
+                    width: pointBoxSize,
+                    height: pointBoxSize,
+                });
+            });
+
+            setTechPositions(newPositions);
+
+            // حالا رندر نقاط و جایگذاری لیبل‌ها با چک تداخل (شامل نقاط)
+            sortedTechnologies.forEach((tech) => {
+                const pos = newPositions[tech.id];
+                if (!pos) return;
+                const x = pos.x;
+                const y = pos.y;
 
                 const isSelected = selectedTechnology && String(selectedTechnology.id) === String(tech.id);
                 const isHovered = hoveredTechnology && String(hoveredTechnology.id) === String(tech.id);
@@ -572,6 +610,8 @@ export function RadarChart({
                 }
 
                 // محاسبه موقعیت base (بدون scale visual)
+                const radarAngle = startRadarAngle + (tech.impact / 100) * arcSpan;
+                const canvasAngle = ((radarAngle % 360) * Math.PI) / 180;
                 let { labelX, labelY, lineStartX, lineStartY, score } = placeLabelWithCollision(
                     ctx, x, y, canvasAngle, maxRadius, tech.name, baseScale, occupiedLabels, isHovered, isSelected
                 );
@@ -624,8 +664,6 @@ export function RadarChart({
 
                 ctx.restore();
             });
-
-            setTechPositions(newPositions);
 
             ctx.restore();
         };
