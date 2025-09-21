@@ -132,6 +132,17 @@ export function RadarChart({
     [filteredTechnologies]
   );
 
+  useEffect(() => {
+    // Reset positions when dimensions change (fullscreen/resizing)
+    setTechPositions({});
+    setLabelPositions({});
+    // Optional: reset zoom/pan to center when fullscreen
+    setZoomLevel(1);
+    setPanOffset({ x: 0, y: 0 });
+    if (onPanChange) {
+      onPanChange({ x: 0, y: 0 });
+    }
+  }, [dimensions, onPanChange]);
   // به‌روزرسانی ابعاد
   useEffect(() => {
     const updateDimensions = () => {
