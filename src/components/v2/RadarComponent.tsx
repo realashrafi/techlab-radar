@@ -555,7 +555,7 @@ export function RadarChart({
       });
 
       setTechPositions(newPositions);
-      labelBoxesRef.current = {}; // برای Hit-test هر فریم از نو می‌سازیم
+      labelBoxesRef.current = {}; // برای Hit-v2 هر فریم از نو می‌سازیم
 
       // رسم نقطه‌ها و لیبل‌ها
       sorted.forEach((tech) => {
