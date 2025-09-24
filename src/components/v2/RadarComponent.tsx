@@ -36,19 +36,19 @@ const keyToValueMap: Record<string, { field: keyof Technology; value: string }> 
   departments_2: { field: 'department', value: 'Transportation' },
   departments_3: { field: 'department', value: 'ITSupport' },
   departments_4: { field: 'department', value: 'Warehouse Operations' },
-  supply_chain_stage_1: { field: 'supplyChainStage', value: 'First-Mile Logistics' },
-  supply_chain_stage_2: { field: 'supplyChainStage', value: 'Last-Mile Logistics' },
-  supply_chain_stage_3: { field: 'supplyChainStage', value: 'Mid-Mile Logistics' },
-  trade_channel_type_1: { field: 'tradeChannelType', value: 'Electronic Commerce (E-commerce)' },
-  trade_channel_type_2: { field: 'tradeChannelType', value: 'Mobile Commerce (M-commerce)' },
+  supply_chain_stage_1: { field: 'supplyChainStage', value: 'First‑Mile Logistics' }, // اصلاح به en-dash
+  supply_chain_stage_2: { field: 'supplyChainStage', value: 'Last‑Mile Logistics' }, // اصلاح به en-dash
+  supply_chain_stage_3: { field: 'supplyChainStage', value: 'Mid‑Mile Logistics' }, // اصلاح به en-dash
+  trade_channel_type_1: { field: 'tradeChannelType', value: 'Electronic Commerce (E‑commerce)' }, // اصلاح به en-dash
+  trade_channel_type_2: { field: 'tradeChannelType', value: 'Mobile Commerce (M‑commerce)' }, // اصلاح به en-dash
   trade_channel_type_3: { field: 'tradeChannelType', value: 'Social Commerce' },
   trade_channel_type_4: { field: 'tradeChannelType', value: 'Fast Commerce' },
   trade_channel_type_5: { field: 'tradeChannelType', value: 'Marketplaces' },
   trade_channel_type_6: { field: 'tradeChannelType', value: 'Subscription / Service' },
-  trade_channel_type_7: { field: 'tradeChannelType', value: 'Direct-to-Consumer (D2C) Model' },
-  trade_channel_type_8: { field: 'tradeChannelType', value: 'Omni-channel Commerce' },
+  trade_channel_type_7: { field: 'tradeChannelType', value: 'Direct‑to‑Consumer (D2C) Model' }, // اصلاح به en-dash
+  trade_channel_type_8: { field: 'tradeChannelType', value: 'Omni‑channel Commerce' }, // اصلاح به en-dash
   trade_channel_type_9: { field: 'tradeChannelType', value: 'Traditional Commerce (Offline)' },
-  industry_1: { field: 'industry', value: 'Retail – Online & Offline' },
+  industry_1: { field: 'industry', value: 'Retail – Online & Offline' }, // بدون نیاز به تغییر
   industry_2: { field: 'industry', value: 'Healthcare' },
   industry_3: { field: 'industry', value: 'Pharma & Care' },
   industry_4: { field: 'industry', value: 'Food & Beverage' },
