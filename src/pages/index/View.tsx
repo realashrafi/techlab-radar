@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { RadarChart } from '../../components/radar/RadarComponent';
 import { mockTechnologies } from '../../components/lib/data';
 import Layout from '../../components/layout/Layout';
 import { Technology } from '../../components/lib/data';
+import RadarChart from "../../components/test/RadarComponent";
 
 function View() {
     const [hoveredTechnology, setHoveredTechnology] = useState<Technology | null>(null);
