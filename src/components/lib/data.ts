@@ -59,8 +59,8 @@ export const menuItems: MenuItem[] = [
         checked: false,
         children: [
             { key: "supply_chain_stage_1", title: "First‑Mile Logistics", checked: false },  // en-dash
-            { key: "supply_chain_stage_3", title: "Mid‑Mile Logistics", checked: false },    // en-dash
             { key: "supply_chain_stage_2", title: "Last‑Mile Logistics", checked: false },   // en-dash
+            { key: "supply_chain_stage_3", title: "Mid‑Mile Logistics", checked: false },    // en-dash
         ],
     },
     {

@@ -1,8 +1,8 @@
 //@ts-nocheck
-import React, { useState } from 'react';
+import React, {useState} from 'react';
 import SwitchButton from './SwitchButton';
-import { VscChevronDown, VscChevronUp } from 'react-icons/vsc';
-import { LuFilter, LuFilterX } from 'react-icons/lu';
+import {VscChevronDown, VscChevronUp} from 'react-icons/vsc';
+import {LuFilter, LuFilterX} from "react-icons/lu";
 
 interface MenuItem {
     key: string;
@@ -13,21 +13,34 @@ interface MenuItem {
 
 interface AccordionMenuProps {
     items: MenuItem[];
-    selectedKeys: string[]; // پراپ جدید برای کنترل انتخاب‌ها
-    onSelectionChange: (selectedKeys: string[]) => void; // پراپ برای اطلاع‌رسانی تغییرات
+    onSelectionChange?: (selectedKeys: string[]) => void;
 }
 
-const AccordionMenu: React.FC<AccordionMenuProps> = ({ items, selectedKeys, onSelectionChange }) => {
-    const [openItems, setOpenItems] = useState<string[]>([]);
-    const [isMenuOpen, setIsMenuOpen] = useState<boolean>(false);
+const useMenuSelection = () => {
+    const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
 
-    // مدیریت انتخاب یا لغو انتخاب یک فیلتر
     const toggleItem = (key: string, checked: boolean) => {
-        const newSelected = checked
-            ? [...new Set([...selectedKeys, key])] // اضافه کردن کلید
-            : selectedKeys.filter((k) => k !== key); // حذف کلید
-        onSelectionChange(newSelected);
+        setSelectedKeys(prev => {
+            const newSelected = checked
+                ? [...new Set([...prev, key])]
+                : prev.filter(k => k !== key);
+            return newSelected;
+        });
     };
+
+    return {selectedKeys, toggleItem};
+};
+
+const AccordionMenu: React.FC<AccordionMenuProps> = ({items, onSelectionChange}) => {
+    const {selectedKeys, toggleItem} = useMenuSelection();
+    const [openItems, setOpenItems] = useState<string[]>([]);
+    const [isMenuOpen, setIsMenuOpen] = useState<boolean>(false); // 控制小屏幕下菜单显示
+
+    React.useEffect(() => {
+        if (onSelectionChange) {
+            onSelectionChange(selectedKeys);
+        }
+    }, [selectedKeys, onSelectionChange]);
 
     const toggleAccordion = (index: string) => {
         setOpenItems((prev) =>
@@ -36,7 +49,7 @@ const AccordionMenu: React.FC<AccordionMenuProps> = ({ items, selectedKeys, onSe
     };
 
     const toggleMenu = () => {
-        setIsMenuOpen((prev) => !prev);
+        setIsMenuOpen(prev => !prev); // 切换菜单显示状态
     };
 
     const renderItem = (item: MenuItem, index: string, level: number = 0) => {
@@ -53,18 +66,18 @@ const AccordionMenu: React.FC<AccordionMenuProps> = ({ items, selectedKeys, onSe
                     onClick={() => hasChildren && toggleAccordion(index)}
                 >
                     <div className="flex items-center justify-between flex-1 gap-2">
-            <span className={`text-gray-800 text-[14px] text-base ${isLeaf ? 'ml-0' : 'ml-2'}`}>
-              {item.title}
-            </span>
+                        <span className={`text-gray-800 text-[14px] text-base ${isLeaf ? 'ml-0' : 'ml-2'}`}>
+                            {item.title}
+                        </span>
                         {isLeaf && (
                             <SwitchButton
-                                checked={selectedKeys.includes(item.key)} // استفاده از selectedKeys پراپ
+                                checked={selectedKeys.includes(item.key)}
                                 onChange={(checked) => toggleItem(item.key, checked)}
                             />
                         )}
                     </div>
                     {hasChildren && (
-                        <span>{isOpen ? <VscChevronUp /> : <VscChevronDown />}</span>
+                        <span>{isOpen ? <VscChevronUp/> : <VscChevronDown/>}</span>
                     )}
                 </div>
                 {hasChildren && isOpen && (
@@ -84,15 +97,10 @@ const AccordionMenu: React.FC<AccordionMenuProps> = ({ items, selectedKeys, onSe
                 className="lg:hidden block mb-4 px-4 py-2 bg-[#F67242] text-white rounded-md hover:bg-[#e55f32] transition-colors"
                 onClick={toggleMenu}
             >
-                {isMenuOpen ? (
-                    <div className="flex items-center">
-                        مخفی کردن فیلترها <LuFilterX className="ml-2" />
-                    </div>
-                ) : (
-                    <div className="flex items-center">
-                        نمایش فیلترها <LuFilter className="ml-2" />
-                    </div>
-                )}
+                {isMenuOpen ?
+                    <div className={'flex items-center'}>Hide Filters <LuFilterX className={'ml-2'}/></div> :
+                    <div className={'flex items-center'}>Show Filters <LuFilter className={'ml-2'}/></div>
+                }
             </button>
             <div
                 className={`max-w-xs overflow-y-auto h-[550px] max-h-[550px] ${

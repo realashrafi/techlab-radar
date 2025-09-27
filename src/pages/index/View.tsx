@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
+import { RadarChart } from '../../components/radar/RadarComponent';
+import { mockTechnologies } from '../../components/lib/data';
 import Layout from '../../components/layout/Layout';
 import { Technology } from '../../components/lib/data';
-import RadarChart from "../../components/v2/RadarComponent";
 
 function View() {
     const [hoveredTechnology, setHoveredTechnology] = useState<Technology | null>(null);
@@ -20,6 +21,7 @@ function View() {
     return (
         <Layout>
             <RadarChart
+                technologies={mockTechnologies}
                 onTechnologyHover={handleTechnologyHover}
                 onTechnologyClick={handleTechnologyClick}
                 selectedTechnology={selectedTechnology}
