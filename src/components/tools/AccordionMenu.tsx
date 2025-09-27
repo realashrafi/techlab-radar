@@ -1,8 +1,8 @@
 //@ts-nocheck
-import React, {useState} from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import SwitchButton from './SwitchButton';
-import {VscChevronDown, VscChevronUp} from 'react-icons/vsc';
-import {LuFilter, LuFilterX} from "react-icons/lu";
+import { VscChevronDown, VscChevronUp } from 'react-icons/vsc';
+import { LuFilter, LuFilterX } from 'react-icons/lu';
 
 interface MenuItem {
     key: string;
@@ -19,24 +19,29 @@ interface AccordionMenuProps {
 const useMenuSelection = () => {
     const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
 
-    const toggleItem = (key: string, checked: boolean) => {
+    const toggleItem = useCallback((key: string, checked: boolean) => {
         setSelectedKeys(prev => {
+            // اگر وضعیت تغییری نکرده، همان آرایه قبلی را برگردان
+            if (checked && prev.includes(key)) return prev;
+            if (!checked && !prev.includes(key)) return prev;
+
             const newSelected = checked
                 ? [...new Set([...prev, key])]
                 : prev.filter(k => k !== key);
             return newSelected;
         });
-    };
+    }, []);
 
-    return {selectedKeys, toggleItem};
+    return { selectedKeys, toggleItem };
 };
 
-const AccordionMenu: React.FC<AccordionMenuProps> = ({items, onSelectionChange}) => {
-    const {selectedKeys, toggleItem} = useMenuSelection();
+const AccordionMenu: React.FC<AccordionMenuProps> = ({ items, onSelectionChange }) => {
+    const { selectedKeys, toggleItem } = useMenuSelection();
     const [openItems, setOpenItems] = useState<string[]>([]);
-    const [isMenuOpen, setIsMenuOpen] = useState<boolean>(false); // 控制小屏幕下菜单显示
+    const [isMenuOpen, setIsMenuOpen] = useState<boolean>(false);
 
-    React.useEffect(() => {
+    // فقط وقتی محتوای selectedKeys تغییر کرده، onSelectionChange را فراخوانی کن
+    useEffect(() => {
         if (onSelectionChange) {
             onSelectionChange(selectedKeys);
         }
@@ -49,7 +54,7 @@ const AccordionMenu: React.FC<AccordionMenuProps> = ({items, onSelectionChange})
     };
 
     const toggleMenu = () => {
-        setIsMenuOpen(prev => !prev); // 切换菜单显示状态
+        setIsMenuOpen(prev => !prev);
     };
 
     const renderItem = (item: MenuItem, index: string, level: number = 0) => {
@@ -77,7 +82,7 @@ const AccordionMenu: React.FC<AccordionMenuProps> = ({items, onSelectionChange})
                         )}
                     </div>
                     {hasChildren && (
-                        <span>{isOpen ? <VscChevronUp/> : <VscChevronDown/>}</span>
+                        <span>{isOpen ? <VscChevronUp /> : <VscChevronDown />}</span>
                     )}
                 </div>
                 {hasChildren && isOpen && (
@@ -97,10 +102,15 @@ const AccordionMenu: React.FC<AccordionMenuProps> = ({items, onSelectionChange})
                 className="lg:hidden block mb-4 px-4 py-2 bg-[#F67242] text-white rounded-md hover:bg-[#e55f32] transition-colors"
                 onClick={toggleMenu}
             >
-                {isMenuOpen ?
-                    <div className={'flex items-center'}>Hide Filters <LuFilterX className={'ml-2'}/></div> :
-                    <div className={'flex items-center'}>Show Filters <LuFilter className={'ml-2'}/></div>
-                }
+                {isMenuOpen ? (
+                    <div className="flex items-center">
+                        مخفی کردن فیلترها <LuFilterX className="ml-2" />
+                    </div>
+                ) : (
+                    <div className="flex items-center">
+                        نمایش فیلترها <LuFilter className="ml-2" />
+                    </div>
+                )}
             </button>
             <div
                 className={`max-w-xs overflow-y-auto h-[550px] max-h-[550px] ${
