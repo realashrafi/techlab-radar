@@ -69,7 +69,12 @@ const filterTechnologies = (technologies: Technology[], selectedKeys: string[]):
     if (!grouped[m.field].includes(m.value)) grouped[m.field].push(m.value);
   });
   return technologies.filter((t) =>
-      Object.entries(grouped).every(([field, values]) => values.includes(t[field as keyof Technology] as string))
+      Object.entries(grouped).every(([field, values]) => {
+        const techValues = (t[field as keyof Technology] as string)
+            .split(',')
+            .map((v) => v.trim());
+        return values.some((value) => techValues.includes(value));
+      })
   );
 };
 
