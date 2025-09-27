@@ -1,0 +1,282 @@
+[
+  {
+    "name": "AI Chatbots",
+    "impact": 81.2,
+    "timeline": 2.0,
+    "Tech Categories": "AI",
+    "Departments": "Customer Service",
+    "Supply Chain Stage": "First‑Mile Logistics, Last‑Mile Logistics",
+    "Trade Channel Type": "Electronic Commerce (E‑commerce), Mobile Commerce (M‑commerce), Social Commerce, Fast Commerce, Marketplaces, Subscription / Service, Direct‑to‑Consumer (D2C) Model, Omni‑channel Commerce",
+    "Industry": " Retail – Online & Offline ,  Healthcare, Pharma & Care ,  Food & Beverage ,  Mobility, Smart City & Logistics Infra "
+  },
+  {
+    "name": "Geographic Information Systems\n(GIS)",
+    "impact": 60.8,
+    "timeline": 2.0,
+    "Tech Categories": "Data & Analytics",
+    "Departments": "Transportation",
+    "Supply Chain Stage": "First‑Mile Logistics, Last‑Mile Logistics, Mid‑Mile Logistics",
+    "Trade Channel Type": "Traditional Commerce (Offline), Electronic Commerce (E‑commerce), Mobile Commerce (M‑commerce), Fast Commerce",
+    "Industry": " Retail – Online & Offline ,  Agriculture & Agro-Supply Chain ,  Mobility, Smart City & Logistics Infra ,  Energy & Infrastructure "
+  },
+  {
+    "name": "Audio AI",
+    "impact": 81.6,
+    "timeline": 3.0,
+    "Tech Categories": "AI",
+    "Departments": "Customer Service",
+    "Supply Chain Stage": "Last‑Mile Logistics",
+    "Trade Channel Type": "Electronic Commerce (E‑commerce), Mobile Commerce (M‑commerce), Social Commerce",
+    "Industry": " Retail – Online & Offline ,  Healthcare, Pharma & Care "
+  },
+  {
+    "name": "Advanced Analytics",
+    "impact": 75.5,
+    "timeline": 3.0,
+    "Tech Categories": "Data & Analytics",
+    "Departments": "ITSupport, Customer Service",
+    "Supply Chain Stage": "First‑Mile Logistics, Mid‑Mile Logistics, Last‑Mile Logistics",
+    "Trade Channel Type": "Traditional Commerce (Offline), Electronic Commerce (E‑commerce), Fast Commerce, Omni‑channel Commerce, Mobile Commerce (M‑commerce), Social Commerce, Marketplaces, Subscription / Service, Direct‑to‑Consumer (D2C) Model",
+    "Industry": " Retail – Online & Offline ,  Healthcare, Pharma & Care ,  Food & Beverage ,  Manufacturing & Industrial Goods ,  Agriculture & Agro-Supply Chain ,  Energy & Infrastructure ,  Mobility, Smart City & Logistics Infra "
+  },
+  {
+    "name": "RFID Technology",
+    "impact": 64.5,
+    "timeline": 3.0,
+    "Tech Categories": "IoT & Sensing",
+    "Departments": "Warehouse Operations, Transportation",
+    "Supply Chain Stage": "First‑Mile Logistics, Mid‑Mile Logistics, Last‑Mile Logistics",
+    "Trade Channel Type": "Traditional Commerce (Offline), Electronic Commerce (E‑commerce), Fast Commerce, Omni‑channel Commerce",
+    "Industry": " Retail – Online & Offline ,  Healthcare, Pharma & Care ,  Food & Beverage ,  Manufacturing & Industrial Goods ,  Agriculture & Agro-Supply Chain ,  Energy & Infrastructure ,  Mobility, Smart City & Logistics Infra "
+  },
+  {
+    "name": "Sensors",
+    "impact": 58.0,
+    "timeline": 3.0,
+    "Tech Categories": "IoT & Sensing",
+    "Departments": "Transportation, Warehouse Operations",
+    "Supply Chain Stage": "First‑Mile Logistics, Mid‑Mile Logistics, Last‑Mile Logistics",
+    "Trade Channel Type": "Traditional Commerce (Offline), Electronic Commerce (E‑commerce), Fast Commerce, Omni‑channel Commerce",
+    "Industry": " Retail – Online & Offline ,  Food & Beverage ,  Healthcare, Pharma & Care ,  Agriculture & Agro-Supply Chain ,  Manufacturing & Industrial Goods ,  Energy & Infrastructure ,  Mobility, Smart City & Logistics Infra "
+  },
+  {
+    "name": "Gen AI",
+    "impact": 81.6,
+    "timeline": 4.0,
+    "Tech Categories": "AI",
+    "Departments": "ITSupport, Customer Service",
+    "Supply Chain Stage": "First‑Mile Logistics, Last‑Mile Logistics",
+    "Trade Channel Type": "Electronic Commerce (E‑commerce), Mobile Commerce (M‑commerce), Social Commerce, Marketplaces, Subscription / Service, Direct‑to‑Consumer (D2C) Model, Omni‑channel Commerce",
+    "Industry": " Retail – Online & Offline ,  Healthcare, Pharma & Care ,  Food & Beverage ,  Manufacturing & Industrial Goods ,  Agriculture & Agro-Supply Chain ,  Energy & Infrastructure ,  Mobility, Smart City & Logistics Infra "
+  },
+  {
+    "name": "IoT\n(Platforms & Devices)",
+    "impact": 66.1,
+    "timeline": 4.0,
+    "Tech Categories": "IoT & Sensing",
+    "Departments": "Warehouse Operations, Transportation",
+    "Supply Chain Stage": "First‑Mile Logistics, Mid‑Mile Logistics, Last‑Mile Logistics",
+    "Trade Channel Type": "Traditional Commerce (Offline), Electronic Commerce (E‑commerce), Fast Commerce, Omni‑channel Commerce",
+    "Industry": " Retail – Online & Offline ,  Healthcare, Pharma & Care ,  Food & Beverage ,  Manufacturing & Industrial Goods ,  Energy & Infrastructure ,  Agriculture & Agro-Supply Chain ,  Mobility, Smart City & Logistics Infra "
+  },
+  {
+    "name": "Biometric Systems",
+    "impact": 52.7,
+    "timeline": 4.0,
+    "Tech Categories": "IoT & Sensing",
+    "Departments": "Warehouse Operations",
+    "Supply Chain Stage": "First‑Mile Logistics, Last‑Mile Logistics, Mid‑Mile Logistics",
+    "Trade Channel Type": "Traditional Commerce (Offline), Mobile Commerce (M‑commerce)",
+    "Industry": " Retail – Online & Offline ,  Healthcare, Pharma & Care ,  Manufacturing & Industrial Goods ,  Mobility, Smart City & Logistics Infra "
+  },
+  {
+    "name": "Space Optimization",
+    "impact": 68.2,
+    "timeline": 5.0,
+    "Tech Categories": "Next Generation Packaging",
+    "Departments": "Warehouse Operations, Transportation",
+    "Supply Chain Stage": "First‑Mile Logistics, Mid‑Mile Logistics, Last‑Mile Logistics",
+    "Trade Channel Type": "Traditional Commerce (Offline), Omni‑channel Commerce",
+    "Industry": " Retail – Online & Offline ,  Healthcare, Pharma & Care ,  Food & Beverage ,  Manufacturing & Industrial Goods ,  Agriculture & Agro-Supply Chain ,  Mobility, Smart City & Logistics Infra "
+  },
+  {
+    "name": "Smart Printables",
+    "impact": 5,
+    "timeline": 59.2,
+    "Tech Categories": "Next Generation Packaging",
+    "Departments": "Warehouse Operations, Customer Service",
+    "Supply Chain Stage": "First‑Mile Logistics, Mid‑Mile Logistics, Last‑Mile Logistics",
+    "Trade Channel Type": "Traditional Commerce (Offline), Electronic Commerce (E‑commerce), Mobile Commerce (M‑commerce), Social Commerce, Fast Commerce",
+    "Industry": " Retail – Online & Offline ,  Healthcare, Pharma & Care ,  Food & Beverage ,  Manufacturing & Industrial Goods ,  Agriculture & Agro-Supply Chain ,  Mobility, Smart City & Logistics Infra "
+  },
+  {
+    "name": "Computer Vision",
+    "impact": 68.2,
+    "timeline": 5.0,
+    "Tech Categories": "Data & Analytics",
+    "Departments": "Warehouse Operations",
+    "Supply Chain Stage": "First‑Mile Logistics, Mid‑Mile Logistics, Last‑Mile Logistics",
+    "Trade Channel Type": "Traditional Commerce (Offline), Electronic Commerce (E‑commerce), Fast Commerce, Omni‑channel Commerce",
+    "Industry": " Retail – Online & Offline ,  Healthcare, Pharma & Care ,  Food & Beverage ,  Manufacturing & Industrial Goods ,  Agriculture & Agro-Supply Chain ,  Energy & Infrastructure ,  Mobility, Smart City & Logistics Infra "
+  },
+  {
+    "name": "Robots\n(Mobile & Stationary)",
+    "impact": 64.1,
+    "timeline": 5.0,
+    "Tech Categories": "Automation & Robotics",
+    "Departments": "Warehouse Operations",
+    "Supply Chain Stage": "First‑Mile Logistics, Mid‑Mile Logistics, Last‑Mile Logistics",
+    "Trade Channel Type": "Omni‑channel Commerce, Electronic Commerce (E‑commerce), Mobile Commerce (M‑commerce), Social Commerce",
+    "Industry": " Healthcare, Pharma & Care ,  Food & Beverage ,  Manufacturing & Industrial Goods ,  Mobility, Smart City & Logistics Infra ,  Agriculture & Agro-Supply Chain "
+  },
+  {
+    "name": "Remote Operations",
+    "impact": 62.0,
+    "timeline": 5.0,
+    "Tech Categories": "Automation & Robotics",
+    "Departments": "Transportation, Warehouse Operations",
+    "Supply Chain Stage": "First‑Mile Logistics, Mid‑Mile Logistics, Last‑Mile Logistics",
+    "Trade Channel Type": "Electronic Commerce (E‑commerce), Omni‑channel Commerce",
+    "Industry": " Retail – Online & Offline ,  Healthcare, Pharma & Care ,  Food & Beverage ,  Manufacturing & Industrial Goods ,  Agriculture & Agro-Supply Chain ,  Energy & Infrastructure ,  Mobility, Smart City & Logistics Infra "
+  },
+  {
+    "name": "Wearable Devices/Sensors",
+    "impact": 60.0,
+    "timeline": 5.0,
+    "Tech Categories": "IoT & Sensing",
+    "Departments": "Warehouse Operations",
+    "Supply Chain Stage": "Mid‑Mile Logistics",
+    "Trade Channel Type": "Traditional Commerce (Offline), Electronic Commerce (E‑commerce), Mobile Commerce (M‑commerce), Social Commerce, Fast Commerce, Marketplaces, Subscription / Service, Direct‑to‑Consumer (D2C) Model, Omni‑channel Commerce",
+    "Industry": " Retail – Online & Offline ,  Healthcare, Pharma & Care ,  Food & Beverage ,  Manufacturing & Industrial Goods ,  Agriculture & Agro-Supply Chain ,  Energy & Infrastructure ,  Mobility, Smart City & Logistics Infra "
+  },
+  {
+    "name": "Edge Computing",
+    "impact": 59.2,
+    "timeline": 5.0,
+    "Tech Categories": "Digital Infrastructure & Connectivity",
+    "Departments": "ITSupport, Warehouse Operations",
+    "Supply Chain Stage": "Mid‑Mile Logistics",
+    "Trade Channel Type": "Electronic Commerce (E‑commerce), Mobile Commerce (M‑commerce), Social Commerce, Fast Commerce, Omni‑channel Commerce",
+    "Industry": " Retail – Online & Offline ,  Healthcare, Pharma & Care ,  Food & Beverage ,  Manufacturing & Industrial Goods ,  Agriculture & Agro-Supply Chain ,  Energy & Infrastructure ,  Mobility, Smart City & Logistics Infra "
+  },
+  {
+    "name": "Smart Printables",
+    "impact": 59.2,
+    "timeline": 5.0,
+    "Tech Categories": "IOT",
+    "Departments": "Warehouse Operations, Customer Service",
+    "Supply Chain Stage": "First‑Mile Logistics, Last‑Mile Logistics",
+    "Trade Channel Type": "Traditional Commerce (Offline), Fast Commerce, Omni‑channel Commerce",
+    "Industry": " Retail – Online & Offline ,  Healthcare, Pharma & Care ,  Food & Beverage ,  Manufacturing & Industrial Goods ,  Agriculture & Agro-Supply Chain ,  Mobility, Smart City & Logistics Infra "
+  },
+  {
+    "name": "Blockchain",
+    "impact": 65.7,
+    "timeline": 6.0,
+    "Tech Categories": "Blockchain & Security",
+    "Departments": "Transportation, ITSupport",
+    "Supply Chain Stage": "First‑Mile Logistics, Mid‑Mile Logistics, Last‑Mile Logistics",
+    "Trade Channel Type": "Electronic Commerce (E‑commerce), Mobile Commerce (M‑commerce), Social Commerce, Fast Commerce, Marketplaces, Subscription / Service, Direct‑to‑Consumer (D2C) Model, Omni‑channel Commerce",
+    "Industry": " Retail – Online & Offline ,  Healthcare, Pharma & Care ,  Food & Beverage ,  Manufacturing & Industrial Goods ,  Agriculture & Agro-Supply Chain ,  Energy & Infrastructure ,  Mobility, Smart City & Logistics Infra "
+  },
+  {
+    "name": "Extended Reality\n(AR)",
+    "impact": 64.5,
+    "timeline": 6.0,
+    "Tech Categories": "Mixed Reality (AR/VR/MR)",
+    "Departments": "Warehouse Operations, Transportation, Customer Service",
+    "Supply Chain Stage": "First‑Mile Logistics, Mid‑Mile Logistics, Last‑Mile Logistics",
+    "Trade Channel Type": "Traditional Commerce (Offline), Electronic Commerce (E‑commerce), Mobile Commerce (M‑commerce), Social Commerce, Omni‑channel Commerce",
+    "Industry": " Retail – Online & Offline ,  Healthcare, Pharma & Care ,  Food & Beverage ,  Manufacturing & Industrial Goods ,  Agriculture & Agro-Supply Chain ,  Energy & Infrastructure ,  Mobility, Smart City & Logistics Infra "
+  },
+  {
+    "name": "Extended Reality\n(VR)",
+    "impact": 64.5,
+    "timeline": 6.0,
+    "Tech Categories": "Mixed Reality (AR/VR/MR)",
+    "Departments": "Warehouse Operations, Transportation, Customer Service",
+    "Supply Chain Stage": "First‑Mile Logistics, Mid‑Mile Logistics, Last‑Mile Logistics",
+    "Trade Channel Type": "Traditional Commerce (Offline), Mobile Commerce (M‑commerce), Electronic Commerce (E‑commerce), Social Commerce, Omni‑channel Commerce",
+    "Industry": " Retail – Online & Offline ,  Healthcare, Pharma & Care ,  Food & Beverage ,  Manufacturing & Industrial Goods ,  Agriculture & Agro-Supply Chain ,  Energy & Infrastructure ,  Mobility, Smart City & Logistics Infra "
+  },
+  {
+    "name": "Extended Reality\n(MR)",
+    "impact": 64.5,
+    "timeline": 6.0,
+    "Tech Categories": "Mixed Reality (AR/VR/MR)",
+    "Departments": "Warehouse Operations, Transportation, Customer Service",
+    "Supply Chain Stage": "Mid‑Mile Logistics",
+    "Trade Channel Type": "Traditional Commerce (Offline), Electronic Commerce (E‑commerce), Mobile Commerce (M‑commerce), Social Commerce, Omni‑channel Commerce",
+    "Industry": " Retail – Online & Offline ,  Healthcare, Pharma & Care ,  Food & Beverage ,  Manufacturing & Industrial Goods ,  Agriculture & Agro-Supply Chain ,  Energy & Infrastructure ,  Mobility, Smart City & Logistics Infra "
+  },
+  {
+    "name": "Next Generation Connectivity\n(5G & 6G)",
+    "impact": 62.9,
+    "timeline": 6.0,
+    "Tech Categories": "Digital Infrastructure & Connectivity",
+    "Departments": "Warehouse Operations, Transportation, Customer Service",
+    "Supply Chain Stage": "First‑Mile Logistics, Mid‑Mile Logistics, Last‑Mile Logistics",
+    "Trade Channel Type": "Electronic Commerce (E‑commerce), Mobile Commerce (M‑commerce), Social Commerce, Fast Commerce, Omni‑channel Commerce",
+    "Industry": " Retail – Online & Offline ,  Healthcare, Pharma & Care ,  Food & Beverage ,  Manufacturing & Industrial Goods ,  Agriculture & Agro-Supply Chain ,  Energy & Infrastructure ,  Mobility, Smart City & Logistics Infra "
+  },
+  {
+    "name": "Exoskeletons",
+    "impact": 45.3,
+    "timeline": 6.0,
+    "Tech Categories": "Automation & Robotics",
+    "Departments": "Warehouse Operations",
+    "Supply Chain Stage": "Mid‑Mile Logistics",
+    "Trade Channel Type": "Traditional Commerce (Offline), Electronic Commerce (E‑commerce), Mobile Commerce (M‑commerce), Social Commerce, Fast Commerce, Marketplaces, Subscription / Service, Direct‑to‑Consumer (D2C) Model, Omni‑channel Commerce",
+    "Industry": " Healthcare, Pharma & Care ,  Manufacturing & Industrial Goods ,  Agriculture & Agro-Supply Chain ,  Energy & Infrastructure ,  Mobility, Smart City & Logistics Infra "
+  },
+  {
+    "name": "Renewable Energy",
+    "impact": 35.5,
+    "timeline": 6.0,
+    "Tech Categories": "Energy & Sustainability",
+    "Departments": "Warehouse Operations, Transportation",
+    "Supply Chain Stage": "First‑Mile Logistics, Mid‑Mile Logistics, Last‑Mile Logistics",
+    "Trade Channel Type": "Traditional Commerce (Offline)",
+    "Industry": " Energy & Infrastructure ,  Mobility, Smart City & Logistics Infra "
+  },
+  {
+    "name": "Digital Twins",
+    "impact": 80.0,
+    "timeline": 7.0,
+    "Tech Categories": "Data & Analytics",
+    "Departments": "Warehouse Operations, Transportation",
+    "Supply Chain Stage": "First‑Mile Logistics, Mid‑Mile Logistics, Last‑Mile Logistics",
+    "Trade Channel Type": "Electronic Commerce (E‑commerce), Fast Commerce, Omni‑channel Commerce",
+    "Industry": " Retail – Online & Offline ,  Healthcare, Pharma & Care ,  Food & Beverage ,  Manufacturing & Industrial Goods ,  Energy & Infrastructure ,  Agriculture & Agro-Supply Chain ,  Mobility, Smart City & Logistics Infra "
+  },
+  {
+    "name": "Drones",
+    "impact": 37.6,
+    "timeline": 7.0,
+    "Tech Categories": "Autonomous Transport & Delivery",
+    "Departments": "Transportation",
+    "Supply Chain Stage": "Last‑Mile Logistics",
+    "Trade Channel Type": "Mobile Commerce (M‑commerce), Fast Commerce",
+    "Industry": " Retail – Online & Offline ,  Healthcare, Pharma & Care ,  Food & Beverage ,  Manufacturing & Industrial Goods ,  Agriculture & Agro-Supply Chain ,  Energy & Infrastructure ,  Mobility, Smart City & Logistics Infra "
+  },
+  {
+    "name": "3D Printing",
+    "impact": 45.3,
+    "timeline": 7.0,
+    "Tech Categories": "Automation & Robotics",
+    "Departments": "Warehouse Operations",
+    "Supply Chain Stage": "First‑Mile Logistics, Mid‑Mile Logistics",
+    "Trade Channel Type": "Traditional Commerce (Offline), Omni‑channel Commerce",
+    "Industry": " Retail – Online & Offline ,  Healthcare, Pharma & Care ,  Food & Beverage ,  Manufacturing & Industrial Goods ,  Energy & Infrastructure ,  Mobility, Smart City & Logistics Infra "
+  },
+  {
+    "name": "Autonomous Vehicles",
+    "impact": 44.5,
+    "timeline": 8.0,
+    "Tech Categories": "Autonomous Transport & Delivery",
+    "Departments": "Transportation",
+    "Supply Chain Stage": "Mid‑Mile Logistics, Last‑Mile Logistics",
+    "Trade Channel Type": "Electronic Commerce (E‑commerce), Mobile Commerce (M‑commerce), Fast Commerce, Omni‑channel Commerce",
+    "Industry": " Retail – Online & Offline ,  Healthcare, Pharma & Care ,  Food & Beverage ,  Manufacturing & Industrial Goods ,  Agriculture & Agro-Supply Chain ,  Energy & Infrastructure ,  Mobility, Smart City & Logistics Infra "
+  }
+]
