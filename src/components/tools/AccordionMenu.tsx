@@ -1,5 +1,5 @@
 //@ts-nocheck
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
 import SwitchButton from './SwitchButton';
 import { VscChevronDown, VscChevronUp } from 'react-icons/vsc';
 import { LuFilter, LuFilterX } from 'react-icons/lu';
@@ -13,39 +13,21 @@ interface MenuItem {
 
 interface AccordionMenuProps {
     items: MenuItem[];
-    onSelectionChange?: (selectedKeys: string[]) => void;
+    selectedKeys: string[]; // پراپ جدید برای کنترل انتخاب‌ها
+    onSelectionChange: (selectedKeys: string[]) => void; // پراپ برای اطلاع‌رسانی تغییرات
 }
 
-const useMenuSelection = () => {
-    const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
-
-    const toggleItem = useCallback((key: string, checked: boolean) => {
-        setSelectedKeys(prev => {
-            // اگر وضعیت تغییری نکرده، همان آرایه قبلی را برگردان
-            if (checked && prev.includes(key)) return prev;
-            if (!checked && !prev.includes(key)) return prev;
-
-            const newSelected = checked
-                ? [...new Set([...prev, key])]
-                : prev.filter(k => k !== key);
-            return newSelected;
-        });
-    }, []);
-
-    return { selectedKeys, toggleItem };
-};
-
-const AccordionMenu: React.FC<AccordionMenuProps> = ({ items, onSelectionChange }) => {
-    const { selectedKeys, toggleItem } = useMenuSelection();
+const AccordionMenu: React.FC<AccordionMenuProps> = ({ items, selectedKeys, onSelectionChange }) => {
     const [openItems, setOpenItems] = useState<string[]>([]);
     const [isMenuOpen, setIsMenuOpen] = useState<boolean>(false);
 
-    // فقط وقتی محتوای selectedKeys تغییر کرده، onSelectionChange را فراخوانی کن
-    useEffect(() => {
-        if (onSelectionChange) {
-            onSelectionChange(selectedKeys);
-        }
-    }, [selectedKeys, onSelectionChange]);
+    // مدیریت انتخاب یا لغو انتخاب یک فیلتر
+    const toggleItem = (key: string, checked: boolean) => {
+        const newSelected = checked
+            ? [...new Set([...selectedKeys, key])] // اضافه کردن کلید
+            : selectedKeys.filter((k) => k !== key); // حذف کلید
+        onSelectionChange(newSelected);
+    };
 
     const toggleAccordion = (index: string) => {
         setOpenItems((prev) =>
@@ -54,7 +36,7 @@ const AccordionMenu: React.FC<AccordionMenuProps> = ({ items, onSelectionChange 
     };
 
     const toggleMenu = () => {
-        setIsMenuOpen(prev => !prev);
+        setIsMenuOpen((prev) => !prev);
     };
 
     const renderItem = (item: MenuItem, index: string, level: number = 0) => {
@@ -71,12 +53,12 @@ const AccordionMenu: React.FC<AccordionMenuProps> = ({ items, onSelectionChange 
                     onClick={() => hasChildren && toggleAccordion(index)}
                 >
                     <div className="flex items-center justify-between flex-1 gap-2">
-                        <span className={`text-gray-800 text-[14px] text-base ${isLeaf ? 'ml-0' : 'ml-2'}`}>
-                            {item.title}
-                        </span>
+            <span className={`text-gray-800 text-[14px] text-base ${isLeaf ? 'ml-0' : 'ml-2'}`}>
+              {item.title}
+            </span>
                         {isLeaf && (
                             <SwitchButton
-                                checked={selectedKeys.includes(item.key)}
+                                checked={selectedKeys.includes(item.key)} // استفاده از selectedKeys پراپ
                                 onChange={(checked) => toggleItem(item.key, checked)}
                             />
                         )}

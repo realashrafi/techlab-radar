@@ -2,11 +2,45 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { RiFullscreenLine, RiFullscreenExitLine } from 'react-icons/ri';
 import { FiZoomIn, FiZoomOut, FiRefreshCw } from 'react-icons/fi';
-import { menuItems, Technology } from '../lib/data';
+import { Technology, MenuItem } from '../lib/data';
 import AccordionMenu from '../tools/AccordionMenu';
 import { CustomExportControls } from '../tools/CustomExportControls';
 import { labelOverrides, LabelOverride } from './labelOverrides';
-import { fetchTechnologies } from "./fetchTechnologies";
+import { fetchTechnologies } from './fetchTechnologies';
+
+// Utility to compare arrays for equality
+const areArraysEqual = (arr1: string[], arr2: string[]): boolean => {
+    if (arr1.length !== arr2.length) return false;
+    return arr1.every((val, index) => val === arr2[index]);
+};
+
+// Deep comparison for menuItems
+const areMenuItemsEqual = (items1: MenuItem[], items2: MenuItem[]): boolean => {
+    if (items1.length !== items2.length) return false;
+    return items1.every((item1, index) => {
+        const item2 = items2[index];
+        if (item1.key !== item2.key || item1.title !== item2.title) return false;
+        if (!item1.children && !item2.children) return true;
+        if (!item1.children || !item2.children || item1.children.length !== item2.children.length) return false;
+        return item1.children.every((child1, childIndex) => {
+            const child2 = item2.children![childIndex];
+            return child1.key === child2.key && child1.title === child2.title;
+        });
+    });
+};
+
+// Debounce function
+const debounce = <F extends (...args: any[]) => any>(func: F, wait: number) => {
+    let timeout: NodeJS.Timeout | null = null;
+    return (...args: Parameters<F>): Promise<ReturnType<F>> => {
+        return new Promise((resolve) => {
+            if (timeout) clearTimeout(timeout);
+            timeout = setTimeout(() => {
+                resolve(func(...args));
+            }, wait);
+        });
+    };
+};
 
 interface RadarChartProps {
     onTechnologyHover: (tech: Technology | null) => void;
@@ -32,59 +66,93 @@ export function RadarChart({
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const animationRef = useRef<number>(0);
+    const initialMenuItemsRef = useRef<MenuItem[] | null>(null); // Store initial menuItems
 
     const [apiTechnologies, setApiTechnologies] = useState<Technology[]>([]);
+    const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+    const [summary, setSummary] = useState<{
+        total_technologies: number;
+        high_impact: number;
+        near_term: number;
+    }>({ total_technologies: 0, high_impact: 0, near_term: 0 });
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
     const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
     const [needleAngle, setNeedleAngle] = useState(150);
     const [trailOpacity, setTrailOpacity] = useState(1);
-
     const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
     const [zoomLevel, setZoomLevel] = useState(externalZoomLevel);
     const [panOffset, setPanOffset] = useState(externalPanOffset);
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [lastPinchDistance, setLastPinchDistance] = useState<number | null>(null);
 
-    // وضعیت پَن/ادیت
+    // Panning/editing state
     const [isPanning, setIsPanning] = useState(false);
     const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
 
-    // موقعیت نقاط و لیبل‌ها
+    // Positions for points and labels
     const [techPositions, setTechPositions] = useState<Record<string, { x: number; y: number }>>({});
-    const [labelPositions, setLabelPositions] = useState<Record<string, {
-        x: number;
-        y: number;
-        lineStartX: number;
-        lineStartY: number
-    }>>({});
+    const [labelPositions, setLabelPositions] = useState<
+        Record<string, { x: number; y: number; lineStartX: number; lineStartY: number }>
+    >({});
 
-    // حالت ویرایش دستی لیبل‌ها
+    // Manual label editing
     const [editLabelsMode, setEditLabelsMode] = useState(false);
     const draggingLabelRef = useRef<{ id: string; offsetX: number; offsetY: number } | null>(null);
     const [localOverrides, setLocalOverrides] = useState<Record<string, LabelOverride>>({});
     const labelBoxesRef = useRef<Record<string, { x: number; y: number; w: number; h: number }>>({});
 
-    // مدال
+    // Modal
     const [modalTech, setModalTech] = useState<Technology | null>(null);
 
-    // کمک‌تابع: گرفتن override (اول local، بعد فایل)
+    // Helper: Get override (local first, then file)
     const getOverrideFor = (tech: Technology): LabelOverride | null => {
         const byId = localOverrides[String(tech.id)] || labelOverrides[String(tech.id)];
         const byName = localOverrides[tech.name] || labelOverrides[tech.name];
         return byId || byName || null;
     };
 
-    // آمار
-    const totalTechnologies = apiTechnologies.length;
-    const highImpactTechnologies = apiTechnologies.filter((t) => t.impact >= 75).length;
-    const nearTermTechnologies = apiTechnologies.filter((t) => t.timeline <= 3).length;
+    // Statistics from summary
+    const totalTechnologies = summary.total_techonologies;
+    const highImpactTechnologies = summary.high_impact;
+    const nearTermTechnologies = summary.near_term;
 
+    // Debounced fetch
+    const debouncedFetchTechnologies = useCallback(debounce(fetchTechnologies, 300), []);
+
+    // Optimized selection change handler
+    const handleSelectionChange = useCallback((newKeys: string[]) => {
+        setSelectedKeys((prev) => {
+            if (areArraysEqual(prev, newKeys)) return prev;
+            return newKeys;
+        });
+    }, []);
+
+    // Fetch data
     useEffect(() => {
-        fetchTechnologies(selectedKeys)
-            .then((data) => setApiTechnologies(data))
-            .catch((err) => console.log(err.message));
-    }, [selectedKeys]);
+        setIsLoading(true);
+        setError(null);
+        debouncedFetchTechnologies(selectedKeys)
+            .then((data) => {
+                setApiTechnologies(data.technologies);
+                setSummary(data.summary);
+                if (!initialMenuItemsRef.current) {
+                    initialMenuItemsRef.current = data.menuItems;
+                    setMenuItems(data.menuItems);
+                } else if (!areMenuItemsEqual(initialMenuItemsRef.current, data.menuItems)) {
+                    initialMenuItemsRef.current = data.menuItems;
+                    setMenuItems(data.menuItems);
+                }
+                setIsLoading(false);
+            })
+            .catch((err) => {
+                setError(err.message);
+                setIsLoading(false);
+            });
+    }, [selectedKeys, debouncedFetchTechnologies]);
 
-    // ابعاد
+    // Rest of the useEffect hooks and other functions remain the same
+    // Dimensions
     useEffect(() => {
         const update = () => {
             if (!containerRef.current) return;
@@ -100,7 +168,7 @@ export function RadarChart({
         };
     }, []);
 
-    // انیمیشن سوزن
+    // Needle animation
     const animateNeedle = useCallback(() => {
         if (!needleEnabled || !dimensions.width) return;
         setNeedleAngle((prev) => {
@@ -111,7 +179,10 @@ export function RadarChart({
             const inArc = (n >= 150 && n <= 360) || (n >= 0 && n <= 30);
             if (next >= 390 || !inArc) {
                 setTrailOpacity(0);
-                setTimeout(() => { setTrailOpacity(1); setNeedleAngle(150); }, 200);
+                setTimeout(() => {
+                    setTrailOpacity(1);
+                    setNeedleAngle(150);
+                }, 200);
                 return 150;
             }
             if (next >= 360) next -= 360;
@@ -127,7 +198,7 @@ export function RadarChart({
         return () => animationRef.current && cancelAnimationFrame(animationRef.current);
     }, [animateNeedle, needleEnabled, dimensions.width]);
 
-    // زوم/پَن
+    // Zoom/pan
     const handleZoom = useCallback(
         (delta: number, clientX: number, clientY: number) => {
             if (!canvasRef.current) return;
@@ -152,34 +223,43 @@ export function RadarChart({
         onPanChange?.({ x: 0, y: 0 });
     };
 
-    const handleWheel = useCallback((e: WheelEvent) => {
-        if (e.shiftKey) {
-            e.preventDefault();
-            const delta = e.deltaY > 0 ? -0.1 : 0.1;
-            handleZoom(delta, e.clientX, e.clientY);
-        }
-    }, [handleZoom]);
-
-    const handleTouchStart = useCallback((e: TouchEvent) => {
-        if (e.touches.length === 2) {
-            e.preventDefault();
-            const [t1, t2] = [e.touches[0], e.touches[1]];
-            setLastPinchDistance(Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY));
-        }
-    }, []);
-
-    const handleTouchMove = useCallback((e: TouchEvent) => {
-        if (e.touches.length === 2) {
-            e.preventDefault();
-            const [t1, t2] = [e.touches[0], e.touches[1]];
-            const d = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
-            if (lastPinchDistance !== null) {
-                const delta = (d - lastPinchDistance) * 0.01;
-                handleZoom(delta, (t1.clientX + t2.clientX) / 2, (t1.clientY + t2.clientY) / 2);
+    const handleWheel = useCallback(
+        (e: WheelEvent) => {
+            if (e.shiftKey) {
+                e.preventDefault();
+                const delta = e.deltaY > 0 ? -0.1 : 0.1;
+                handleZoom(delta, e.clientX, e.clientY);
             }
-            setLastPinchDistance(d);
-        }
-    }, [lastPinchDistance, handleZoom]);
+        },
+        [handleZoom]
+    );
+
+    const handleTouchStart = useCallback(
+        (e: TouchEvent) => {
+            if (e.touches.length === 2) {
+                e.preventDefault();
+                const [t1, t2] = [e.touches[0], e.touches[1]];
+                setLastPinchDistance(Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY));
+            }
+        },
+        []
+    );
+
+    const handleTouchMove = useCallback(
+        (e: TouchEvent) => {
+            if (e.touches.length === 2) {
+                e.preventDefault();
+                const [t1, t2] = [e.touches[0], e.touches[1]];
+                const d = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+                if (lastPinchDistance !== null) {
+                    const delta = (d - lastPinchDistance) * 0.01;
+                    handleZoom(delta, (t1.clientX + t2.clientX) / 2, (t1.clientY + t2.clientY) / 2);
+                }
+                setLastPinchDistance(d);
+            }
+        },
+        [lastPinchDistance, handleZoom]
+    );
 
     const handleTouchEnd = useCallback(() => setLastPinchDistance(null), []);
 
@@ -198,7 +278,7 @@ export function RadarChart({
         };
     }, [handleWheel, handleTouchStart, handleTouchMove, handleTouchEnd]);
 
-    // هر تغییری در چیدمان → کش لیبل‌ها ریست شود
+    // Reset label cache on layout change
     useEffect(() => {
         setLabelPositions({});
     }, [apiTechnologies, zoomLevel, dimensions.width, dimensions.height]);
@@ -234,7 +314,7 @@ export function RadarChart({
         return bestD <= 40 ? bestId : null;
     };
 
-    // الگوریتم اتومات جای‌گذاری (وقتی override نباشد)
+    // Automatic label placement (when no override)
     const placeLabelWithCollision = (
         ctx: CanvasRenderingContext2D,
         pointX: number,
@@ -247,7 +327,7 @@ export function RadarChart({
         isHovered: boolean,
         isSelected: boolean
     ) => {
-        const baseOffset = (isSelected || isHovered) ? 22 : 12;
+        const baseOffset = isSelected || isHovered ? 22 : 12;
         const textMetrics = ctx.measureText(text);
         let textWidth = textMetrics.width;
         let textHeight = 12;
@@ -257,10 +337,14 @@ export function RadarChart({
 
         const candidates: any[] = [];
         const directions = [
-            { angle: angleRad + Math.PI / 2 }, { angle: angleRad - Math.PI / 2 },
-            { angle: angleRad }, { angle: angleRad + Math.PI },
-            { angle: angleRad + 3 * Math.PI / 4 }, { angle: angleRad + Math.PI / 4 },
-            { angle: angleRad - 3 * Math.PI / 4 }, { angle: angleRad - Math.PI / 4 },
+            { angle: angleRad + Math.PI / 2 },
+            { angle: angleRad - Math.PI / 2 },
+            { angle: angleRad },
+            { angle: angleRad + Math.PI },
+            { angle: angleRad + (3 * Math.PI) / 4 },
+            { angle: angleRad + Math.PI / 4 },
+            { angle: angleRad - (3 * Math.PI) / 4 },
+            { angle: angleRad - Math.PI / 4 },
         ];
 
         directions.forEach((dir) => {
@@ -275,7 +359,7 @@ export function RadarChart({
                         x: labelX - textWidth / 2 - padding,
                         y: labelY - textHeight / 2 - 1,
                         width: boxWidth,
-                        height: boxHeight
+                        height: boxHeight,
                     },
                     occupiedLabels
                 );
@@ -295,7 +379,7 @@ export function RadarChart({
                     x: labelX - textWidth / 2 - padding,
                     y: labelY - textHeight / 2 - 1,
                     width: boxWidth,
-                    height: boxHeight
+                    height: boxHeight,
                 },
                 occupiedLabels
             );
@@ -308,7 +392,7 @@ export function RadarChart({
             x: best.labelX - textWidth / 2 - padding,
             y: best.labelY - textHeight / 2 - 1,
             width: boxWidth,
-            height: boxHeight
+            height: boxHeight,
         };
         occupiedLabels.push(box);
         return {
@@ -317,7 +401,7 @@ export function RadarChart({
             lineStartX: best.lineStartX,
             lineStartY: best.lineStartY,
             box,
-            score: best.score
+            score: best.score,
         };
     };
 
@@ -326,14 +410,14 @@ export function RadarChart({
         for (let existing of occupied) {
             const dx = Math.abs(newBox.x - existing.x);
             const dy = Math.abs(newBox.y - existing.y);
-            const overlapX = Math.max(0, (newBox.width / 2 + existing.width / 2) + 2 - dx);
-            const overlapY = Math.max(0, (newBox.height / 2 + existing.height / 2) + 2 - dy);
+            const overlapX = Math.max(0, newBox.width / 2 + existing.width / 2 + 2 - dx);
+            const overlapY = Math.max(0, newBox.height / 2 + existing.height / 2 + 2 - dy);
             if (overlapX > 0 && overlapY > 0) score += (overlapX * overlapY) / 50;
         }
         return score;
     }
 
-    // ایجاد backgroundImage با useMemo
+    // Background image
     const backgroundImage = React.useMemo(() => {
         const img = new Image();
         img.src = '/iran2.jpeg';
@@ -395,7 +479,7 @@ export function RadarChart({
             ctx.fillStyle = outerGradient;
             ctx.fill();
 
-            // بک‌گراند
+            // Background
             if (backgroundImage.complete && backgroundImage.naturalWidth !== 0) {
                 ctx.save();
                 ctx.beginPath();
@@ -444,11 +528,12 @@ export function RadarChart({
                 ctx.restore();
             }
 
-            // خطوط شعاعی ساده
+            // Simple radial lines
             ctx.strokeStyle = '#E5E7EB';
             ctx.lineWidth = 1;
             ctx.globalAlpha = 0.3;
-            const divisions = 10, angleStep = 24;
+            const divisions = 10,
+                angleStep = 24;
             for (let i = 0; i <= divisions; i++) {
                 const radarAngle = 150 + i * angleStep;
                 const a = (radarAngle * Math.PI) / 180;
@@ -459,7 +544,7 @@ export function RadarChart({
             }
             ctx.globalAlpha = 1;
 
-            // رینگ‌های زمان
+            // Time rings
             const rings = [
                 { years: 2, radius: maxRadius * 0.2, color: '#A0A8B2' },
                 { years: 4, radius: maxRadius * 0.4, color: '#B0BAC5' },
@@ -480,7 +565,7 @@ export function RadarChart({
                 ctx.fillText(`${ring.years}yr`, centerX, centerY - ring.radius - 8);
             });
 
-            // گرادیانت رینگ دور رادار
+            // Gradient ring around radar
             const gradientRingRadius = maxRadius + 20;
             const gradientRingWidth = 12;
             const impactGradient = ctx.createLinearGradient(
@@ -508,7 +593,7 @@ export function RadarChart({
             ctx.globalAlpha = 0.4;
             ctx.stroke();
 
-            // متن لبه‌ها
+            // Edge text
             ctx.fillStyle = '#2E2E2E';
             ctx.globalAlpha = 0.7;
             ctx.font = '12px Inter, sans-serif';
@@ -516,8 +601,9 @@ export function RadarChart({
             ctx.fillText('100% Impact', centerX + Math.cos(endAngle) * (maxRadius + 35), centerY + Math.sin(endAngle) * (maxRadius + 35) + 15);
             ctx.globalAlpha = 1;
 
-            // محاسبه جای نقاط
-            const arcSpan = 240, startRadarAngle = 150;
+            // Calculate point positions
+            const arcSpan = 240,
+                startRadarAngle = 150;
             const newPositions: Record<string, { x: number; y: number }> = {};
             const occupiedLabels: { x: number; y: number; width: number; height: number }[] = [];
 
@@ -525,7 +611,7 @@ export function RadarChart({
                 const ra = Math.min(a.timeline / 10, 1);
                 const rb = Math.min(b.timeline / 10, 1);
                 if (rb !== ra) return rb - ra;
-                return (startRadarAngle + (a.impact / 100) * arcSpan) - (startRadarAngle + (b.impact / 100) * arcSpan);
+                return startRadarAngle + (a.impact / 100) * arcSpan - (startRadarAngle + (b.impact / 100) * arcSpan);
             });
 
             sorted.forEach((tech) => {
@@ -535,7 +621,7 @@ export function RadarChart({
                 newPositions[tech.id] = { x: centerX + Math.cos(a) * r, y: centerY + Math.sin(a) * r };
             });
 
-            // هاله ممنوعه اطراف نقطه‌ها
+            // Forbidden halo around points
             Object.values(newPositions).forEach((p) => {
                 const sz = 28;
                 occupiedLabels.push({ x: p.x - sz / 2, y: p.y - sz / 2, width: sz, height: sz });
@@ -544,17 +630,18 @@ export function RadarChart({
             setTechPositions(newPositions);
             labelBoxesRef.current = {};
 
-            // رسم نقطه‌ها و لیبل‌ها
+            // Draw points and labels
             sorted.forEach((tech) => {
                 const pos = newPositions[tech.id];
                 if (!pos) return;
-                const x = pos.x, y = pos.y;
+                const x = pos.x,
+                    y = pos.y;
 
                 const isSelected = selectedTechnology && String(selectedTechnology.id) === String(tech.id);
                 const isHovered = hoveredTechnology && String(hoveredTechnology.id) === String(tech.id);
                 const visualScale = isSelected ? 1.5 : isHovered ? 1.2 : 1;
 
-                // نقطه
+                // Point
                 ctx.save();
                 ctx.globalAlpha = isSelected || isHovered ? 1 : 0.9;
                 ctx.beginPath();
@@ -565,7 +652,7 @@ export function RadarChart({
                 ctx.lineWidth = 2;
                 ctx.stroke();
 
-                // تعیین محل لیبل: override یا اتومات
+                // Determine label position: override or auto
                 const ov = getOverrideFor(tech);
                 const radarAngle = startRadarAngle + (tech.impact / 100) * arcSpan;
                 const canvasAngle = ((radarAngle % 360) * Math.PI) / 180;
@@ -581,14 +668,15 @@ export function RadarChart({
                         labelY = ov.y ?? y;
                     }
                     const tm = ctx.measureText(tech.name);
-                    const h = 12 * visualScale, pad = 2 * visualScale;
+                    const h = 12 * visualScale,
+                        pad = 2 * visualScale;
                     const w = tm.width * visualScale + pad * 2 + 4;
                     const bh = h + 2 + 4;
                     occupiedLabels.push({
                         x: labelX - (tm.width * visualScale) / 2 - pad,
                         y: labelY - h / 2 - 1,
                         width: w,
-                        height: bh
+                        height: bh,
                     });
                 } else {
                     const placed = placeLabelWithCollision(ctx, x, y, canvasAngle, maxRadius, tech.name, 1, occupiedLabels, !!isHovered, !!isSelected);
@@ -598,10 +686,10 @@ export function RadarChart({
                     lineStartY = placed.lineStartY;
                 }
 
-                // کش موقعیت لیبل
+                // Cache label position
                 setLabelPositions((prev) => ({ ...prev, [tech.id]: { x: labelX, y: labelY, lineStartX, lineStartY } }));
 
-                // خط اتصال
+                // Connection line
                 ctx.globalAlpha = 0.5;
                 ctx.strokeStyle = isHovered ? '#17A398' : '#B8D4E3';
                 ctx.lineWidth = isHovered ? 2 : 1;
@@ -610,7 +698,7 @@ export function RadarChart({
                 ctx.lineTo(labelX, labelY);
                 ctx.stroke();
 
-                // بک‌گراند و متن
+                // Background and text
                 const tm2 = ctx.measureText(tech.name);
                 const textW = tm2.width * visualScale;
                 const textH = 12 * visualScale - 1;
@@ -634,7 +722,7 @@ export function RadarChart({
                 ctx.textBaseline = 'middle';
                 ctx.fillText(tech.name, labelX, labelY);
 
-                // ثبت باکس برای هیت‌تست (ادیت)
+                // Store box for hit-test (edit)
                 labelBoxesRef.current[String(tech.id)] = {
                     x: labelX - textW / 2 - pad2,
                     y: labelY - textH / 2 - 1,
@@ -642,7 +730,7 @@ export function RadarChart({
                     h: textH + 2,
                 };
 
-                // نمایش کادر قرمز دور لیبل در حالت Edit
+                // Show red border around label in Edit mode
                 if (editLabelsMode) {
                     const b = labelBoxesRef.current[String(tech.id)];
                     ctx.save();
@@ -656,7 +744,7 @@ export function RadarChart({
                 ctx.restore();
             });
 
-            // روبان بزرگ بالای بوم وقتی Edit روشنه
+            // Big ribbon at top of canvas when Edit is on
             if (editLabelsMode) {
                 ctx.save();
                 ctx.resetTransform?.();
@@ -715,8 +803,17 @@ export function RadarChart({
 
         return () => animationRef.current && cancelAnimationFrame(animationRef.current);
     }, [
-        dimensions, apiTechnologies, selectedTechnology, hoveredTechnology,
-        needleEnabled, zoomLevel, panOffset, needleAngle, trailOpacity, editLabelsMode, localOverrides
+        dimensions,
+        apiTechnologies,
+        selectedTechnology,
+        hoveredTechnology,
+        needleEnabled,
+        zoomLevel,
+        panOffset,
+        needleAngle,
+        trailOpacity,
+        editLabelsMode,
+        localOverrides,
     ]);
 
     const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -766,12 +863,12 @@ export function RadarChart({
 
         if (editLabelsMode) {
             if (draggingLabelRef.current) {
-                const id = draggingLabelRef.current.id;
+                const id = draggingLabelRef.current;
                 const point = techPositions[id];
                 if (point) {
                     const dx = Math.round(worldX - point.x);
                     const dy = Math.round(worldY - point.y);
-                    setLocalOverrides(prev => ({ ...prev, [id]: { mode: 'rel', dx, dy } }));
+                    setLocalOverrides((prev) => ({ ...prev, [id]: { mode: 'rel', dx, dy } }));
                 }
                 return;
             }
@@ -787,8 +884,8 @@ export function RadarChart({
             onPanChange(newPan);
         } else {
             const hovered = Object.entries(techPositions).find(([, p]) => Math.hypot(worldX - (p as any).x, worldY - (p as any).y) <= 20 / zoomLevel);
-            onTechnologyHover(hovered ? apiTechnologies.find(t => String(t.id) === hovered[0]) || null : null);
-            canvasRef.current.style.cursor = hovered ? 'pointer' : (isPanning ? 'grabbing' : 'grab');
+            onTechnologyHover(hovered ? apiTechnologies.find((t) => String(t.id) === hovered[0]) || null : null);
+            canvasRef.current.style.cursor = hovered ? 'pointer' : isPanning ? 'grabbing' : 'grab';
         }
     };
 
@@ -848,91 +945,138 @@ export function RadarChart({
                     </button>
                 </div>
                 <div className="space-y-2 text-sm text-gray-700">
-                    <p><strong>Sector:</strong> {tech.sector}</p>
-                    <p><strong>Trend Cluster:</strong> {tech.trendCluster}</p>
-                    <p><strong>Focus Area:</strong> {tech.focusArea}</p>
-                    <p><strong>Impact:</strong> {tech.impact}%</p>
-                    <p><strong>Timeline:</strong> {tech.timeline} years</p>
-                    <p><strong>Department:</strong> {tech.department}</p>
-                    <p><strong>Supply Chain Stage:</strong> {tech.supplyChainStage}</p>
-                    <p><strong>Trade Channel Type:</strong> {tech.tradeChannelType}</p>
-                    <p><strong>Industry:</strong> {tech.industry}</p>
-                    <p className="mt-4"><strong>Description:</strong> {tech.description}</p>
+                    <p>
+                        <strong>Sector:</strong> {tech.sector}
+                    </p>
+                    <p>
+                        <strong>Trend Cluster:</strong> {tech.trendCluster}
+                    </p>
+                    <p>
+                        <strong>Focus Area:</strong> {tech.focusArea}
+                    </p>
+                    <p>
+                        <strong>Impact:</strong> {tech.impact}%
+                    </p>
+                    <p>
+                        <strong>Timeline:</strong> {tech.timeline} years
+                    </p>
+                    <p>
+                        <strong>Department:</strong> {tech.department}
+                    </p>
+                    <p>
+                        <strong>Supply Chain Stage:</strong> {tech.supplyChainStage}
+                    </p>
+                    <p>
+                        <strong>Trade Channel Type:</strong> {tech.tradeChannelType}
+                    </p>
+                    <p>
+                        <strong>Industry:</strong> {tech.industry}
+                    </p>
+                    <p className="mt-4">
+                        <strong>Description:</strong> {tech.description}
+                    </p>
                 </div>
             </div>
         </div>
     );
 
+    // Loading spinner component
+    const LoadingSpinner = () => (
+        <div className="flex items-center justify-center h-full">
+            <p className="ml-4 text-lg text-[#F67242]">Loading...</p>
+        </div>
+    );
+
     return (
-        <div ref={containerRef}
-             className="w-full min-h-[90vh] flex flex-col items-center justify-center rounded-lg relative overflow-hidden">
-            <div className="flex items-center justify-between gap-4 lg:mt-8 mt-20 transition-all">
-                <div className="absolute top-40 lg:left-10">
-                    <AccordionMenu items={menuItems} onSelectionChange={setSelectedKeys} />
-                </div>
-                <div
-                    className="flex flex-col items-start justify-center lg:text-[14px] text-[12px] bg-gray-50 p-3 lg:min-w-68 border border-black/10 rounded-md">
-                    <span>Total Technologies</span><span className="font-bold">{totalTechnologies}</span>
-                </div>
-                <div
-                    className="flex flex-col items-start justify-center lg:text-[14px] text-[12px] bg-gray-50 p-3 lg:min-w-68 border border-black/10 rounded-md">
-                    <span>High Impact</span><span className="font-bold">{highImpactTechnologies}</span>
-                </div>
-                <div
-                    className="flex flex-col items-start justify-center lg:text-[14px] text-[12px] bg-gray-50 p-3 lg:min-w-68 border border-black/10 rounded-md">
-                    <span>Near Term</span><span className="font-bold">{nearTermTechnologies}</span>
-                </div>
-            </div>
+        <div ref={containerRef} className="w-full min-h-[90vh] flex flex-col items-center justify-center rounded-lg relative overflow-hidden">
+            {error ? (
+                <div className="flex items-center justify-center h-full text-red-500">{error}</div>
+            ) : isLoading ? (
+                <LoadingSpinner />
+            ) : (
+                <>
+                    <div className="flex items-center justify-between gap-4 lg:mt-8 mt-20 transition-all">
+                        <div className="absolute top-40 lg:left-10">
+                            <AccordionMenu items={menuItems} onSelectionChange={handleSelectionChange} selectedKeys={selectedKeys} />
+                        </div>
+                        <div className="flex flex-col items-start justify-center lg:text-[14px] text-[12px] bg-gray-50 p-3 lg:min-w-68 border border-black/10 rounded-md">
+                            <span>Total Technologies</span>
+                            <span className="font-bold">{totalTechnologies}</span>
+                        </div>
+                        <div className="flex flex-col items-start justify-center lg:text-[14px] text-[12px] bg-gray-50 p-3 lg:min-w-68 border border-black/10 rounded-md">
+                            <span>High Impact</span>
+                            <span className="font-bold">{highImpactTechnologies}</span>
+                        </div>
+                        <div className="flex flex-col items-start justify-center lg:text-[14px] text-[12px] bg-gray-50 p-3 lg:min-w-68 border border-black/10 rounded-md">
+                            <span>Near Term</span>
+                            <span className="font-bold">{nearTermTechnologies}</span>
+                        </div>
+                    </div>
 
-            <canvas
-                ref={canvasRef}
-                onClick={handleCanvasClick}
-                onMouseMove={handleMouseMove}
-                onMouseEnter={handleMouseEnter}
-                onMouseLeave={handleMouseLeave}
-                onMouseDown={handleMouseDown}
-                onMouseUp={handleMouseUp}
-                className="w-full h-full transition-all"
-                style={{ width: dimensions.width, height: dimensions.height }}
-            />
+                    <canvas
+                        ref={canvasRef}
+                        onClick={handleCanvasClick}
+                        onMouseMove={handleMouseMove}
+                        onMouseEnter={handleMouseEnter}
+                        onMouseLeave={handleMouseLeave}
+                        onMouseDown={handleMouseDown}
+                        onMouseUp={handleMouseUp}
+                        className="w-full h-full transition-all"
+                        style={{ width: dimensions.width, height: dimensions.height }}
+                    />
 
-            <div className="absolute bottom-36 left-1/2 transform -translate-x-1/2">
-                <p className="text-xs text-[#2E2E2E]/60 text-center">
-                    Distance from center = Implementation timeline • Arc position = Business impact (0-100%)
-                </p>
-            </div>
+                    <div className="absolute bottom-36 left-1/2 transform -translate-x-1/2">
+                        <p className="text-xs text-[#2E2E2E]/60 text-center">
+                            Distance from center = Implementation timeline • Arc position = Business impact (0-100%)
+                        </p>
+                    </div>
 
-            <div className="absolute lg:top-28 top-8 left-8 lg:left-12 flex space-x-3">
-                <button onClick={handleZoomIn}
-                        className="bg-[#F67242] hover:bg-[#F67242]/80 text-white font-bold p-3 rounded"
-                        aria-label="Zoom In">
-                    <FiZoomIn />
-                </button>
-                <button onClick={handleZoomOut}
-                        className="bg-[#F67242] hover:bg-[#F67242]/80 text-white font-bold p-3 rounded"
-                        aria-label="Zoom Out">
-                    <FiZoomOut />
-                </button>
-                <button onClick={handleResetZoom}
-                        className="bg-[#F67242] hover:bg-[#F67242]/80 text-white font-bold p-3 rounded"
-                        aria-label="Reset Zoom">
-                    <FiRefreshCw />
-                </button>
-                <button onClick={() => toggleFullscreen()}
-                        className="bg-[#F67242] hover:bg-[#F67242]/80 text-white font-bold p-3 rounded"
-                        aria-label={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}>
-                    {isFullscreen ? <RiFullscreenExitLine /> : <RiFullscreenLine />}
-                </button>
-            </div>
+                    <div className="absolute lg:top-28 top-8 left-8 lg:left-12 flex space-x-3">
+                        <button
+                            onClick={handleZoomIn}
+                            className="bg-[#F67242] hover:bg-[#F67242]/80 text-white font-bold p-3 rounded"
+                            aria-label="Zoom In"
+                        >
+                            <FiZoomIn />
+                        </button>
+                        <button
+                            onClick={handleZoomOut}
+                            className="bg-[#F67242] hover:bg-[#F67242]/80 text-white font-bold p-3 rounded"
+                            aria-label="Zoom Out"
+                        >
+                            <FiZoomOut />
+                        </button>
+                        <button
+                            onClick={handleResetZoom}
+                            className="bg-[#F67242] hover:bg-[#F67242]/80 text-white font-bold p-3 rounded"
+                            aria-label="Reset Zoom"
+                        >
+                            <FiRefreshCw />
+                        </button>
+                        <button
+                            onClick={() => toggleFullscreen()}
+                            className="bg-[#F67242] hover:bg-[#F67242]/80 text-white font-bold p-3 rounded"
+                            aria-label={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
+                        >
+                            {isFullscreen ? <RiFullscreenExitLine /> : <RiFullscreenLine />}
+                        </button>
+                    </div>
 
-            <div className="absolute lg:top-28 top-8 right-8 flex space-x-2">
-                <CustomExportControls technologies={apiTechnologies} />
-            </div>
+                    <div className="absolute lg:top-28 top-8 right-8 flex space-x-2">
+                        <CustomExportControls technologies={apiTechnologies} />
+                    </div>
 
-            {modalTech && <Modal tech={modalTech} onClose={() => {
-                setModalTech(null);
-                onTechnologyClick(null);
-            }} />}
+                    {modalTech && (
+                        <Modal
+                            tech={modalTech}
+                            onClose={() => {
+                                setModalTech(null);
+                                onTechnologyClick(null);
+                            }}
+                        />
+                    )}
+                </>
+            )}
         </div>
     );
 }
