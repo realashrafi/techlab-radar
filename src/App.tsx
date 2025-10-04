@@ -3,6 +3,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router';
 import View from "./pages/index/View";
 import ProtectedRoute from "./components/layout/ProtectedRoute";
+import ViewAdmin from "./pages/admin/ViewAdmin";
 
 
 const App: React.FC = () => {
@@ -20,9 +21,9 @@ const App: React.FC = () => {
                 <Route
                     path="/admin/dashboard"
                     element={
-                        <ProtectedRoute requiredRoles={['ADMIN_1', 'ADMIN_2', 'ADMIN_3']}>
-                            <View />
-                        </ProtectedRoute>
+                        // <ProtectedRoute requiredRoles={['ADMIN_1', 'ADMIN_2', 'ADMIN_3']}>
+                            <ViewAdmin />
+                        // </ProtectedRoute>
                     }
                 />
                 <Route
