@@ -317,7 +317,7 @@ function Technologies() {
                                         <div className="md:flex">
                                             <div className="w-full p-3">
                                                 <div
-                                                    className="relative h-48 rounded-lg border-2 border-blue-500 bg-gray-50 flex justify-center items-center  hover:shadow-xl transition-shadow duration-300 ease-in-out"
+                                                    className="relative h-44 mt-1 rounded-lg border-2 border-blue-500 bg-gray-50 flex justify-center items-center  hover:shadow-xl transition-shadow duration-300 ease-in-out"
                                                 >
                                                     <div className="absolute flex flex-col items-center">
                                                         <FaCloudUploadAlt className={'w-8 h-8'}/>
