@@ -12,7 +12,7 @@ import {
     FiXCircle
 } from 'react-icons/fi';
 import {mockTechnologies, Technology} from "../../components/lib/data";
-import Layout from "../../components/layout/Layout";
+import { FaCloudUploadAlt } from "react-icons/fa";
 
 
 interface CSVUploadResult {
@@ -313,14 +313,34 @@ function Technologies() {
                                     <label htmlFor="csv-upload" className="text-sm font-medium text-gray-900">
                                         Upload CSV File
                                     </label>
-                                    <input
-                                        id="csv-upload"
-                                        type="file"
-                                        accept=".csv"
-                                        onChange={handleFileUpload}
-                                        disabled={isUploading}
-                                        className="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
-                                    />
+                                    <div className="max-w-md mx-auto rounded-lg overflow-hidden md:max-w-xl">
+                                        <div className="md:flex">
+                                            <div className="w-full p-3">
+                                                <div
+                                                    className="relative h-48 rounded-lg border-2 border-blue-500 bg-gray-50 flex justify-center items-center  hover:shadow-xl transition-shadow duration-300 ease-in-out"
+                                                >
+                                                    <div className="absolute flex flex-col items-center">
+                                                        <FaCloudUploadAlt className={'w-8 h-8'}/>
+                                                        <span className="block text-gray-500 font-semibold"
+                                                        >Drag &amp; drop your files here</span
+                                                        >
+                                                        <span className="block text-gray-400 font-normal mt-1"
+                                                        >or click to upload</span
+                                                        >
+                                                    </div>
+
+                                                    <input
+                                                        id="csv-upload"
+                                                        type="file"
+                                                        accept=".csv"
+                                                        onChange={handleFileUpload}
+                                                        disabled={isUploading}
+                                                        className="h-full w-full opacity-0 cursor-pointer"
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                     <p className="text-xs text-gray-500">
                                         Required columns: name, impact (0-100), timeline (1-10 years)
                                     </p>
