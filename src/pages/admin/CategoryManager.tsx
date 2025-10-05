@@ -96,7 +96,7 @@ function CategoryManager() {
                             <button
                                 key={key}
                                 onClick={() => setActiveTab(key)}
-                                className={`px-4 py-2 text-sm font-medium ${
+                                className={`px-4 py-2 rounded text-sm font-medium ${
                                     activeTab === key
                                         ? 'bg-blue-600 text-white border-b-2 border-blue-600'
                                         : 'text-gray-900 hover:bg-gray-50'

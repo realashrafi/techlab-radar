@@ -3,7 +3,8 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router';
 import View from "./pages/index/View";
 import ProtectedRoute from "./components/layout/ProtectedRoute";
-import ViewAdmin from "./pages/admin/ViewAdmin";
+import View1 from "./pages/admin/View";
+import CategoryManager from "./pages/admin/CategoryManager";
 
 
 const App: React.FC = () => {
@@ -22,7 +23,7 @@ const App: React.FC = () => {
                     path="/admin/dashboard"
                     element={
                         // <ProtectedRoute requiredRoles={['ADMIN_1', 'ADMIN_2', 'ADMIN_3']}>
-                            <ViewAdmin />
+                            <View1 />
                         // </ProtectedRoute>
                     }
                 />

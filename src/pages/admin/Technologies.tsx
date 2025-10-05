@@ -61,7 +61,7 @@ const industryOptions = [
 
 // const mockTechnologies: Technology[] = mockTechnologies;
 
-function ViewAdmin() {
+function Technologies() {
     const [technologies, setTechnologies] = useState<Technology[]>(mockTechnologies);
     const [uploadResult, setUploadResult] = useState<CSVUploadResult | null>(null);
     const [isUploading, setIsUploading] = useState(false);
@@ -608,4 +608,4 @@ function ViewAdmin() {
     );
 }
 
-export default ViewAdmin;
+export default Technologies;
