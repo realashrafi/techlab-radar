@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, {useState} from 'react';
+import {motion, AnimatePresence} from 'framer-motion';
 import Technologies from './Technologies';
 import CategoryManager from './CategoryManager';
 import AnalyticsDashboard from './Analytics';
@@ -9,9 +9,9 @@ function TabView() {
     const [activeTab, setActiveTab] = useState('tab1');
 
     const tabs = [
-        { id: 'tab1', label: 'Technologies', component: <Technologies /> },
-        { id: 'tab2', label: 'Categories', component: <CategoryManager /> },
-        { id: 'tab3', label: 'Analytics', component: <AnalyticsDashboard /> },
+        {id: 'tab1', label: 'Technologies', component: <Technologies/>},
+        {id: 'tab2', label: 'Categories', component: <CategoryManager/>},
+        {id: 'tab3', label: 'Analytics', component: <AnalyticsDashboard/>},
     ];
 
     return (
@@ -39,11 +39,11 @@ function TabView() {
                     <AnimatePresence mode="wait">
                         <motion.div
                             key={activeTab} // کلید منحصربه‌فرد برای هر تب
-                            initial={{ opacity: 0, y: 20 }} // حالت اولیه (قبل از ورود)
-                            animate={{ opacity: 1, y: 0 }} // حالت نهایی (بعد از ورود)
-                            exit={{ opacity: 0, y: -20 }} // حالت خروج
-                            transition={{ duration: 0.3, ease: 'easeInOut' }} // تنظیمات انیمیشن
-                        className={'min-h-[90vh]'}
+                            initial={{opacity: 0, y: 20}} // حالت اولیه (قبل از ورود)
+                            animate={{opacity: 1, y: 0}} // حالت نهایی (بعد از ورود)
+                            exit={{opacity: 0, y: -20}} // حالت خروج
+                            transition={{duration: 0.3, ease: 'easeInOut'}} // تنظیمات انیمیشن
+                            className={'min-h-[90vh]'}
                         >
                             {tabs.find((tab) => tab.id === activeTab)?.component}
                         </motion.div>
