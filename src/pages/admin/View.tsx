@@ -43,6 +43,7 @@ function TabView() {
                             animate={{ opacity: 1, y: 0 }} // حالت نهایی (بعد از ورود)
                             exit={{ opacity: 0, y: -20 }} // حالت خروج
                             transition={{ duration: 0.3, ease: 'easeInOut' }} // تنظیمات انیمیشن
+                        className={'min-h-[90vh]'}
                         >
                             {tabs.find((tab) => tab.id === activeTab)?.component}
                         </motion.div>
