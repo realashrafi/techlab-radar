@@ -152,7 +152,7 @@ const Scene: React.FC<{
                             lockX={false}
                             lockY={false}
                             lockZ={false}
-                            position={[x, 0.3, z]}
+                            position={[x, 0.45, z]}
                         >
                             <Text
                                 fontSize={0.2}
