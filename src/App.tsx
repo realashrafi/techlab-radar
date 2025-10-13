@@ -21,9 +21,9 @@ const App: React.FC = () => {
                 <Route
                     path="/admin/dashboard"
                     element={
-                        <ProtectedRoute requiredRoles={['ADMIN_1', 'ADMIN_2', 'ADMIN_3']}>
+                        // <ProtectedRoute requiredRoles={['ADMIN_1', 'ADMIN_2', 'ADMIN_3']}>
                             <View1 />
-                        </ProtectedRoute>
+                        // </ProtectedRoute>
                     }
                 />
                 <Route
