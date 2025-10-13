@@ -22,7 +22,7 @@ const LoginComponent = () => {
                     animate={{opacity: 1, y: 0}}
                     transition={{duration: 0.5}}
                     dir={'rtl'}
-                    className="bg-white/70 backdrop-blur-[4px] -mt-20 p-8 rounded-lg shadow-lg w-full max-w-md relative z-10"
+                    className="bg-white/70 backdrop-blur-[4px] -mt-20 p-8 rounded-xl shadow-lg w-full max-w-md relative z-10"
                 >
                     <h2 className="text-2xl font-bold mb-6 text-center text-[#005BBB]">
                         ورود به سیستم
@@ -35,6 +35,7 @@ const LoginComponent = () => {
                             <motion.input
                                 whileFocus={{scale: 1.02}}
                                 type="tel"
+                                dir={'rtl'}
                                 value={mobile}
                                 onChange={(e) => setMobile(e.target.value)}
                                 className="w-full px-4 py-2 border border-[#005BBB] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#F67242] transition-all duration-300"

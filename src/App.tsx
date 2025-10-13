@@ -1,10 +1,8 @@
-// App.tsx
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router';
 import View from "./pages/index/View";
 import ProtectedRoute from "./components/layout/ProtectedRoute";
 import View1 from "./pages/admin/View";
-import CategoryManager from "./pages/admin/CategoryManager";
 import LoginComponent from "./pages/login/LoginComponent";
 
 
@@ -23,9 +21,9 @@ const App: React.FC = () => {
                 <Route
                     path="/admin/dashboard"
                     element={
-                        // <ProtectedRoute requiredRoles={['ADMIN_1', 'ADMIN_2', 'ADMIN_3']}>
+                        <ProtectedRoute requiredRoles={['ADMIN_1', 'ADMIN_2', 'ADMIN_3']}>
                             <View1 />
-                        // </ProtectedRoute>
+                        </ProtectedRoute>
                     }
                 />
                 <Route

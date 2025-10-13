@@ -988,7 +988,7 @@ export function RadarChart({
     );
 
     return (
-        <div ref={containerRef} className="w-full min-h-[90vh] flex flex-col items-center justify-center rounded-lg relative overflow-hidden">
+        <div ref={containerRef} className="w-full min-h-[calc(100vh-80px)] flex flex-col items-center justify-center rounded-lg relative overflow-hidden">
             {error ? (
                 <div className="flex items-center justify-center h-full text-red-500">{error}</div>
             ) : isLoading ? (
