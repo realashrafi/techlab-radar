@@ -5,6 +5,7 @@ import View from "./pages/index/View";
 import ProtectedRoute from "./components/layout/ProtectedRoute";
 import View1 from "./pages/admin/View";
 import CategoryManager from "./pages/admin/CategoryManager";
+import LoginComponent from "./pages/login/LoginComponent";
 
 
 const App: React.FC = () => {
@@ -13,7 +14,7 @@ const App: React.FC = () => {
             <Routes>
                 {/* صفحات عمومی */}
                 <Route path="/" element={<View />} />
-                <Route path="/auth/login" element={<View />} />
+                <Route path="/auth/login" element={<LoginComponent />} />
                 <Route path="/auth/forgot-password" element={<View />} />
                 <Route path="/auth/reset-password" element={<View />} />
                 <Route path="/unauthorized" element={<div>unauthorized</div>} />

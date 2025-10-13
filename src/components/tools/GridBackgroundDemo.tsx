@@ -3,7 +3,7 @@ import { cn } from "../lib/utils";
 
 export function GridBackgroundDemo({ children }: { children: React.ReactNode }) {
     return (
-        <div className="relative h-full w-full ">
+        <div className="relative h-full w-full pt-20">
             <div
                 className={cn(
                     "absolute inset-0 z-[-2]",
