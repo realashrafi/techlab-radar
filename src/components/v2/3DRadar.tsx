@@ -45,12 +45,6 @@ const Scene: React.FC<{
         setNeedleAngle((prev) => {
             const inc = 1;
             let next = prev + inc;
-            let n = next % 360;
-            if (n < 0) n += 360;
-            // const inArc = (n >= 150 && n <= 360) || (n >= 0 && n <= 30);
-            // if (next >= 390 || !inArc) {
-            //     return 150;
-            // }
             if (next >= 360) next -= 360;
             return next;
         });
@@ -72,29 +66,42 @@ const Scene: React.FC<{
     // انیمیشن دوربین برای فوکوس
     const focusOnTech = (tech: SelectedTech | null) => {
         if (!cameraRef.current) return;
-        const pos = tech ? tech.position : [0, 10, 10];
+
+        let targetPos: [number, number, number] = [0, 0, 0];
+        let cameraPos: [number, number, number] = [0, 5, 5]; // موقعیت پیش‌فرض برای نمای کلی (زاویه ~45 درجه)
+
+        if (tech) {
+            const pos = tech.position;
+            targetPos = [pos[0], pos[1], pos[2]];
+
+            // محاسبه جهت radial از مرکز به نقطه
+            const radial = new THREE.Vector3(pos[0], 0, pos[2]).normalize();
+
+            const dist = 1.5; // فاصله horizontal برای زاویه ~45 درجه (می‌تونی تنظیم کنی، مثلاً برای 35 درجه dist=2, height=1.2)
+            const height = 1.5; // ارتفاع برای زاویه ~45 درجه
+
+            // موقعیت دوربین: نقطه + آفست radial (دور از مرکز) + ارتفاع
+            cameraPos = [
+                pos[0] + radial.x * dist,
+                pos[1] + height,
+                pos[2] + radial.z * dist,
+            ];
+        }
+
         gsap.to(cameraRef.current.position, {
-            x: pos[0],
-            y: pos[1] + 1.5, // کمی بالاتر از نقطه
-            z: pos[2] + 1.5, // کمی فاصله برای فوکوس
+            x: cameraPos[0],
+            y: cameraPos[1],
+            z: cameraPos[2],
             duration: 1,
             ease: 'power2.out',
             onUpdate: () => {
                 if (cameraRef.current) {
-                    // دوربین همیشه به نقطه نگاه کنه
-                    cameraRef.current.lookAt(
-                        tech ? new THREE.Vector3(pos[0], pos[1], pos[2]) : new THREE.Vector3(0, 0, 0)
-                    );
+                    cameraRef.current.lookAt(new THREE.Vector3(...targetPos));
                 }
             },
         });
-        gsap.to(cameraRef.current.rotation, {
-            x: tech ? -Math.PI / 6 : -Math.PI / 3, // زاویه ملایم‌تر برای فوکوس
-            y: 0,
-            z: 0,
-            duration: 1,
-            ease: 'power2.out',
-        });
+
+        // حذف انیمیشن rotation چون lookAt خودش هندل می‌کنه
     };
 
     // کلیک روی نقاط
@@ -115,7 +122,7 @@ const Scene: React.FC<{
             <pointLight position={[10, 10, 10]} intensity={1} />
             <OrbitControls enablePan={true} enableZoom={true} />
 
-        {/* صفحه رادار */}
+            {/* صفحه رادار */}
             <mesh rotation={[-Math.PI / 2, 0, 0]}>
                 <circleGeometry args={[5, 64]} />
                 <meshStandardMaterial
@@ -126,7 +133,7 @@ const Scene: React.FC<{
                 />
             </mesh>
 
-        {/* نیدل (خط 2D) */}
+            {/* نیدل (خط 2D) */}
             <line
                 //@ts-ignore
                 ref={needleRef}>
@@ -175,7 +182,7 @@ const RadarChart3D: React.FC<RadarChart3DProps> = ({ technologies = [], onTechno
 
     return (
         <Canvas
-            camera={{ position: [0, 10, 10], fov: 50 }}
+            camera={{ position: [0, 5, 5], fov: 50 }} // موقعیت اولیه تغییر داده شد برای زاویه بهتر
             style={{ height: '100vh' }}
             onCreated={({ camera }) => (cameraRef.current = camera as THREE.PerspectiveCamera)}
         >

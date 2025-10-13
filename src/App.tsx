@@ -13,7 +13,7 @@ const App: React.FC = () => {
             <Routes>
                 {/* صفحات عمومی */}
                 <Route path="/" element={<View />} />
-                <Route path="/1" element={<View3D/>} />
+                <Route path="/3d" element={<View3D/>} />
                 <Route path="/auth/login" element={<LoginComponent />} />
                 <Route path="/auth/forgot-password" element={<View />} />
                 <Route path="/auth/reset-password" element={<View />} />
