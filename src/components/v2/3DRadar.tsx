@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { OrbitControls, Text } from '@react-three/drei';
+import { OrbitControls, Text, Billboard } from '@react-three/drei';
 import * as THREE from 'three';
 import { gsap } from 'gsap';
 
@@ -35,7 +35,7 @@ const Scene: React.FC<{
     selectedTech: SelectedTech | null;
     setSelectedTech: React.Dispatch<React.SetStateAction<SelectedTech | null>>;
     onTechnologyClick: (tech: Technology | null) => void;
-    cameraRef: React.RefObject<THREE.PerspectiveCamera | null>;
+    cameraRef: React.RefObject<THREE.PerspectiveCamera>;
 }> = ({ technologies, selectedTech, setSelectedTech, onTechnologyClick, cameraRef }) => {
     const needleRef = useRef<THREE.Line>(null);
     const [needleAngle, setNeedleAngle] = useState<number>(150);
@@ -59,49 +59,37 @@ const Scene: React.FC<{
                 new THREE.Vector3(0, 0.01, 0), // شروع از مرکز
                 new THREE.Vector3(endX, 0.01, endZ), // انتها روی لبه رادار
             ];
-            (needleRef.current.geometry as THREE.BufferGeometry).setFromPoints(points);
+            needleRef.current.geometry.setFromPoints(points);
         }
     });
 
     // انیمیشن دوربین برای فوکوس
     const focusOnTech = (tech: SelectedTech | null) => {
         if (!cameraRef.current) return;
-
-        let targetPos: [number, number, number] = [0, 0, 0];
-        let cameraPos: [number, number, number] = [0, 5, 5]; // موقعیت پیش‌فرض برای نمای کلی (زاویه ~45 درجه)
-
-        if (tech) {
-            const pos = tech.position;
-            targetPos = [pos[0], pos[1], pos[2]];
-
-            // محاسبه جهت radial از مرکز به نقطه
-            const radial = new THREE.Vector3(pos[0], 0, pos[2]).normalize();
-
-            const dist = 1.5; // فاصله horizontal برای زاویه ~45 درجه (می‌تونی تنظیم کنی، مثلاً برای 35 درجه dist=2, height=1.2)
-            const height = 1.5; // ارتفاع برای زاویه ~45 درجه
-
-            // موقعیت دوربین: نقطه + آفست radial (دور از مرکز) + ارتفاع
-            cameraPos = [
-                pos[0] + radial.x * dist,
-                pos[1] + height,
-                pos[2] + radial.z * dist,
-            ];
-        }
+        const pos = tech ? tech.position : [0, 0, 0];
+        const targetPosition = tech
+            ? [
+                pos[0], // x: در مرکز نقطه
+                pos[1] + 2, // y: کمی بالاتر برای پرسپکتیو
+                pos[2] + 3, // z: فاصله برای دید کامل
+            ]
+            : [0, 10, 10]; // موقعیت پیش‌فرض برای نمای کلی
 
         gsap.to(cameraRef.current.position, {
-            x: cameraPos[0],
-            y: cameraPos[1],
-            z: cameraPos[2],
+            x: targetPosition[0],
+            y: targetPosition[1],
+            z: targetPosition[2],
             duration: 1,
             ease: 'power2.out',
             onUpdate: () => {
                 if (cameraRef.current) {
-                    cameraRef.current.lookAt(new THREE.Vector3(...targetPos));
+                    // دوربین به مرکز نقطه نگاه کند
+                    cameraRef.current.lookAt(
+                        tech ? new THREE.Vector3(pos[0], pos[1], pos[2]) : new THREE.Vector3(0, 0, 0)
+                    );
                 }
             },
         });
-
-        // حذف انیمیشن rotation چون lookAt خودش هندل می‌کنه
     };
 
     // کلیک روی نقاط
@@ -114,7 +102,7 @@ const Scene: React.FC<{
     // برگشت به نمای کلی وقتی selectedTech null می‌شود
     useEffect(() => {
         if (!selectedTech) focusOnTech(null);
-    }, [selectedTech, cameraRef]);
+    }, [selectedTech]);
 
     return (
         <>
@@ -159,15 +147,22 @@ const Scene: React.FC<{
                             <sphereGeometry args={[0.2, 16, 16]} />
                             <meshStandardMaterial color="#FFFFFF" />
                         </mesh>
-                        <Text
+                        <Billboard
+                            follow={true}
+                            lockX={false}
+                            lockY={false}
+                            lockZ={false}
                             position={[x, 0.3, z]}
-                            fontSize={0.2}
-                            color="#2E2E2E"
-                            anchorX="center"
-                            anchorY="middle"
                         >
-                            {tech.name}
-                        </Text>
+                            <Text
+                                fontSize={0.2}
+                                color="#2E2E2E"
+                                anchorX="center"
+                                anchorY="middle"
+                            >
+                                {tech.name}
+                            </Text>
+                        </Billboard>
                     </group>
                 );
             })}
@@ -178,13 +173,15 @@ const Scene: React.FC<{
 // کامپوننت اصلی
 const RadarChart3D: React.FC<RadarChart3DProps> = ({ technologies = [], onTechnologyClick }) => {
     const [selectedTech, setSelectedTech] = useState<SelectedTech | null>(null);
-    const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
+    const cameraRef = useRef<THREE.PerspectiveCamera>(null!); // اطمینان از غیر null بودن
 
     return (
         <Canvas
-            camera={{ position: [0, 5, 5], fov: 50 }} // موقعیت اولیه تغییر داده شد برای زاویه بهتر
+            camera={{ position: [0, 10, 10], fov: 50 }}
             style={{ height: '100vh' }}
-            onCreated={({ camera }) => (cameraRef.current = camera as THREE.PerspectiveCamera)}
+            onCreated={({ camera }) => {
+                cameraRef.current = camera as THREE.PerspectiveCamera;
+            }}
         >
             <Scene
                 technologies={technologies}
