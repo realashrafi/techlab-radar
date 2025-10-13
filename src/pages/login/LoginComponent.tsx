@@ -21,7 +21,8 @@ const LoginComponent = () => {
                     initial={{opacity: 0, y: -50}}
                     animate={{opacity: 1, y: 0}}
                     transition={{duration: 0.5}}
-                    className="bg-white/70 backdrop-blur-[4px] p-8 rounded-lg shadow-lg w-full max-w-md relative z-10"
+                    dir={'rtl'}
+                    className="bg-white/70 backdrop-blur-[4px] -mt-20 p-8 rounded-lg shadow-lg w-full max-w-md relative z-10"
                 >
                     <h2 className="text-2xl font-bold mb-6 text-center text-[#005BBB]">
                         ورود به سیستم
