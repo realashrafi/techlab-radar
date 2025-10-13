@@ -43,14 +43,14 @@ const Scene: React.FC<{
     // انیمیشن نیدل (2D روی صفحه رادار)
     useFrame(() => {
         setNeedleAngle((prev) => {
-            const inc = 0.5;
+            const inc = 1;
             let next = prev + inc;
             let n = next % 360;
             if (n < 0) n += 360;
-            const inArc = (n >= 150 && n <= 360) || (n >= 0 && n <= 30);
-            if (next >= 390 || !inArc) {
-                return 150;
-            }
+            // const inArc = (n >= 150 && n <= 360) || (n >= 0 && n <= 30);
+            // if (next >= 390 || !inArc) {
+            //     return 150;
+            // }
             if (next >= 360) next -= 360;
             return next;
         });
