@@ -1,16 +1,17 @@
 //@ts-nocheck
-import React, { useRef, useEffect, useState, useCallback } from 'react';
-import { Canvas, useFrame, useLoader } from '@react-three/fiber';
-import { OrbitControls, Text, Billboard, Ring, Line } from '@react-three/drei';
+import React, {useRef, useEffect, useState, useCallback} from 'react';
+import {Canvas, useFrame, useLoader} from '@react-three/fiber';
+import {OrbitControls, Text, Billboard, Ring, Line} from '@react-three/drei';
 import * as THREE from 'three';
-import { gsap } from 'gsap';
-import { RiFullscreenLine, RiFullscreenExitLine } from 'react-icons/ri';
-import { FiZoomIn, FiZoomOut, FiRefreshCw } from 'react-icons/fi';
-import { Technology, MenuItem } from '../lib/data';
+import {gsap} from 'gsap';
+import {RiFullscreenLine, RiFullscreenExitLine} from 'react-icons/ri';
+import {FiZoomIn, FiZoomOut, FiRefreshCw} from 'react-icons/fi';
+import {Technology, MenuItem} from '../lib/data';
 import AccordionMenu from '../tools/AccordionMenu';
-import { CustomExportControls } from '../tools/CustomExportControls';
-import { labelOverrides, LabelOverride } from './labelOverrides';
-import { fetchTechnologies } from './fetchTechnologies';
+import {CustomExportControls} from '../tools/CustomExportControls';
+import {labelOverrides, LabelOverride} from './labelOverrides';
+import {fetchTechnologies} from './fetchTechnologies';
+import {motion, AnimatePresence} from 'framer-motion';
 
 // Utility functions
 const areArraysEqual = (arr1: string[], arr2: string[]): boolean => {
@@ -64,7 +65,11 @@ export function RadarChart3D({
 
     const [apiTechnologies, setApiTechnologies] = useState<Technology[]>([]);
     const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
-    const [summary, setSummary] = useState<{ total_technologies: number; high_impact: number; near_term: number }>({ total_technologies: 0, high_impact: 0, near_term: 0 });
+    const [summary, setSummary] = useState<{
+        total_technologies: number;
+        high_impact: number;
+        near_term: number
+    }>({total_technologies: 0, high_impact: 0, near_term: 0});
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
@@ -110,7 +115,8 @@ export function RadarChart3D({
     }, [selectedKeys, debouncedFetchTechnologies]);
 
     useEffect(() => {
-        const update = () => {};
+        const update = () => {
+        };
         window.addEventListener('resize', update);
         document.addEventListener('fullscreenchange', () => setIsFullscreen(!!document.fullscreenElement));
         return () => {
@@ -128,11 +134,17 @@ export function RadarChart3D({
         }
     };
 
-    const handleZoomIn = () => { if (controlsRef.current) controlsRef.current.dollyIn(1.2); };
-    const handleZoomOut = () => { if (controlsRef.current) controlsRef.current.dollyOut(1.2); };
-    const handleResetZoom = () => { if (controlsRef.current) controlsRef.current.reset(); };
+    const handleZoomIn = () => {
+        if (controlsRef.current) controlsRef.current.dollyIn(1.2);
+    };
+    const handleZoomOut = () => {
+        if (controlsRef.current) controlsRef.current.dollyOut(1.2);
+    };
+    const handleResetZoom = () => {
+        if (controlsRef.current) controlsRef.current.reset();
+    };
 
-    const totalTechnologies = summary.total_technologies;
+    const totalTechnologies = summary.total_techonologies;
     const highImpactTechnologies = summary.high_impact;
     const nearTermTechnologies = summary.near_term;
 
@@ -142,57 +154,98 @@ export function RadarChart3D({
         </div>
     );
 
-    const Modal = ({ tech, onClose }: { tech: Technology; onClose: () => void }) => (
-        <div className="fixed inset-0 z-[999999]" style={{ pointerEvents: 'auto', userSelect: 'none' }}>
-            <div className="fixed inset-0 bg-black/50 backdrop-blur-[2px] z-[999999]" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }} />
-            <div className="fixed bg-white/95 p-6 rounded-lg max-w-md w-full mx-4 max-h-[80vh] overflow-y-auto z-[1000000]" style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)', pointerEvents: 'auto' }}>
-                <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-xl font-bold text-gray-800">{tech.name}</h2>
-                    <button onClick={onClose} className="text-gray-500 hover:text-gray-700 text-2xl">×</button>
-                </div>
-                <div className="space-y-2 text-sm text-gray-700">
-                    <p><strong>Sector:</strong> {tech.sector || 'N/A'}</p>
-                    <p><strong>Trend Cluster:</strong> {tech.trendCluster || 'N/A'}</p>
-                    <p><strong>Focus Area:</strong> {tech.focusArea || 'N/A'}</p>
-                    <p><strong>Impact:</strong> {tech.impact}%</p>
-                    <p><strong>Timeline:</strong> {tech.timeline} years</p>
-                    <p><strong>Department:</strong> {tech.department || 'N/A'}</p>
-                    <p><strong>Supply Chain Stage:</strong> {tech.supplyChainStage || 'N/A'}</p>
-                    <p><strong>Trade Channel Type:</strong> {tech.tradeChannelType || 'N/A'}</p>
-                    <p><strong>Industry:</strong> {tech.industry || 'N/A'}</p>
-                    <p className="mt-4"><strong>Description:</strong> {tech.description || 'N/A'}</p>
-                </div>
-            </div>
-        </div>
-    );
+    const Modal = ({ tech, onClose }: { tech: Technology; onClose: () => void }) => {
+        // انیمیشن‌ها
+        const modalVariants = {
+            hidden: { opacity: 0, scale: 0.8 },
+            visible: { opacity: 1, scale: 1, transition: { duration: 0.3, ease: "easeOut" } },
+            exit: { opacity: 0, scale: 0.8, transition: { duration: 0.2, ease: "easeIn" } },
+        };
+
+        const backdropVariants = {
+            hidden: { opacity: 0 },
+            visible: { opacity: 1, transition: { duration: 0.3, ease: "easeOut" } },
+            exit: { opacity: 0, transition: { duration: 0.2, ease: "easeIn" } },
+        };
+
+        return (
+            <motion.div
+                className="fixed inset-0 z-[999999] flex items-center justify-center"
+                style={{ pointerEvents: 'auto', userSelect: 'none' }}
+                initial="hidden"
+                animate="visible"
+                exit="exit"
+                variants={backdropVariants} // انیمیشن رو به backdrop منتقل کردم
+            >
+                <motion.div
+                    className="fixed inset-0 z-[999998]"
+                    onClick={(e) => {
+                        if (e.target === e.currentTarget) onClose();
+                    }}
+                />
+                <motion.div
+                    className="bg-white/95 p-4 rounded-lg max-w-[90%] md:max-w-md w-full max-h-[80vh] overflow-y-auto shadow-lg"
+                    style={{ pointerEvents: 'auto' }}
+                    initial="hidden"
+                    animate="visible"
+                    exit="exit"
+                    variants={modalVariants}
+                >
+                    <div className="flex justify-between items-center mb-4">
+                        <h2 className="text-xl font-bold text-gray-800">{tech.name}</h2>
+                        <button onClick={onClose} className="text-gray-500 hover:text-gray-700 text-2xl">×</button>
+                    </div>
+                    <div className="space-y-2 text-sm text-gray-700">
+                        <p><strong>Sector:</strong> {tech.sector || 'N/A'}</p>
+                        <p><strong>Trend Cluster:</strong> {tech.trendCluster || 'N/A'}</p>
+                        <p><strong>Focus Area:</strong> {tech.focusArea || 'N/A'}</p>
+                        <p><strong>Impact:</strong> {tech.impact}%</p>
+                        <p><strong>Timeline:</strong> {tech.timeline} years</p>
+                        <p><strong>Department:</strong> {tech.department || 'N/A'}</p>
+                        <p><strong>Supply Chain Stage:</strong> {tech.supplyChainStage || 'N/A'}</p>
+                        <p><strong>Trade Channel Type:</strong> {tech.tradeChannelType || 'N/A'}</p>
+                        <p><strong>Industry:</strong> {tech.industry || 'N/A'}</p>
+                        <p className="mt-4"><strong>Description:</strong> {tech.description || 'N/A'}</p>
+                    </div>
+                </motion.div>
+            </motion.div>
+        );
+    };
 
     return (
-        <div ref={containerRef} className="w-full min-h-[calc(100vh-80px)] flex flex-col items-center justify-center rounded-lg relative overflow-hidden" style={{ zIndex: 1 }}>
+        <div ref={containerRef}
+             className="w-full min-h-[calc(100vh-80px)] flex flex-col items-center justify-center rounded-lg relative overflow-hidden"
+             style={{zIndex: 1}}>
             {error ? (
                 <div className="flex items-center justify-center h-full text-red-500">{error}</div>
             ) : isLoading ? (
-                <LoadingSpinner />
+                <LoadingSpinner/>
             ) : (
                 <>
-                    <div className="flex items-center justify-between gap-4 lg:mt-8 mt-20 transition-all" style={{ zIndex: 1000 }}>
+                    <div className="flex items-center justify-between gap-4 lg:mt-8 mt-20 transition-all"
+                         style={{zIndex: 1000}}>
                         <div className="absolute top-40 lg:left-10">
-                            <AccordionMenu items={menuItems} onSelectionChange={handleSelectionChange} selectedKeys={selectedKeys} style={{ zIndex: 1001 }} />
+                            <AccordionMenu items={menuItems} onSelectionChange={handleSelectionChange}
+                                           selectedKeys={selectedKeys} style={{zIndex: 1001}}/>
                         </div>
-                        <div className="flex flex-col items-start justify-center lg:text-[14px] text-[12px] bg-gray-50 p-3 lg:min-w-68 border border-black/10 rounded-md">
+                        <div
+                            className="flex flex-col items-start justify-center lg:text-[14px] text-[12px] bg-gray-50 p-3 lg:min-w-68 border border-black/10 rounded-md">
                             <span>Total Technologies</span>
                             <span className="font-bold">{totalTechnologies}</span>
                         </div>
-                        <div className="flex flex-col items-start justify-center lg:text-[14px] text-[12px] bg-gray-50 p-3 lg:min-w-68 border border-black/10 rounded-md">
+                        <div
+                            className="flex flex-col items-start justify-center lg:text-[14px] text-[12px] bg-gray-50 p-3 lg:min-w-68 border border-black/10 rounded-md">
                             <span>High Impact</span>
                             <span className="font-bold">{highImpactTechnologies}</span>
                         </div>
-                        <div className="flex flex-col items-start justify-center lg:text-[14px] text-[12px] bg-gray-50 p-3 lg:min-w-68 border border-black/10 rounded-md">
+                        <div
+                            className="flex flex-col items-start justify-center lg:text-[14px] text-[12px] bg-gray-50 p-3 lg:min-w-68 border border-black/10 rounded-md">
                             <span>Near Term</span>
                             <span className="font-bold">{nearTermTechnologies}</span>
                         </div>
                     </div>
 
-                    <Canvas camera={{ position: [0, 10, 10], fov: 50 }} style={{ height: '100vh', zIndex: 1 }}>
+                    <Canvas camera={{position: [0, 10, 10], fov: 50}} style={{height: '100vh', zIndex: 1}}>
                         <Scene
                             technologies={apiTechnologies}
                             onTechnologyHover={onTechnologyHover}
@@ -215,33 +268,36 @@ export function RadarChart3D({
                     </div>
 
                     <div className="absolute lg:top-28 top-8 left-8 lg:left-12 flex space-x-3">
-                        <button onClick={handleZoomIn} className="bg-[#F67242] hover:bg-[#F67242]/80 text-white font-bold p-3 rounded">
-                            <FiZoomIn />
+                        <button onClick={handleZoomIn}
+                                className="bg-[#F67242] hover:bg-[#F67242]/80 text-white font-bold p-3 rounded">
+                            <FiZoomIn/>
                         </button>
-                        <button onClick={handleZoomOut} className="bg-[#F67242] hover:bg-[#F67242]/80 text-white font-bold p-3 rounded">
-                            <FiZoomOut />
+                        <button onClick={handleZoomOut}
+                                className="bg-[#F67242] hover:bg-[#F67242]/80 text-white font-bold p-3 rounded">
+                            <FiZoomOut/>
                         </button>
-                        <button onClick={handleResetZoom} className="bg-[#F67242] hover:bg-[#F67242]/80 text-white font-bold p-3 rounded">
-                            <FiRefreshCw />
+                        <button onClick={handleResetZoom}
+                                className="bg-[#F67242] hover:bg-[#F67242]/80 text-white font-bold p-3 rounded">
+                            <FiRefreshCw/>
                         </button>
-                        <button onClick={toggleFullscreen} className="bg-[#F67242] hover:bg-[#F67242]/80 text-white font-bold p-3 rounded">
-                            {isFullscreen ? <RiFullscreenExitLine /> : <RiFullscreenLine />}
+                        <button onClick={toggleFullscreen}
+                                className="bg-[#F67242] hover:bg-[#F67242]/80 text-white font-bold p-3 rounded">
+                            {isFullscreen ? <RiFullscreenExitLine/> : <RiFullscreenLine/>}
                         </button>
                     </div>
 
                     <div className="absolute lg:top-28 top-8 right-8 flex space-x-2">
-                        <CustomExportControls technologies={apiTechnologies} />
+                        <CustomExportControls technologies={apiTechnologies}/>
                     </div>
 
-                    {modalTech && (
-                        <Modal
-                            tech={modalTech}
-                            onClose={() => {
+                    <AnimatePresence>
+                        {modalTech && (
+                            <Modal tech={modalTech} onClose={() => {
                                 setModalTech(null);
                                 onTechnologyClick(null);
-                            }}
-                        />
-                    )}
+                            }} />
+                        )}
+                    </AnimatePresence>
                 </>
             )}
         </div>
@@ -257,7 +313,16 @@ const Scene: React.FC<{
     needleEnabled: boolean;
     getOverrideFor: (tech: Technology) => LabelOverride | null;
     controlsRef: React.RefObject<any>;
-}> = ({ technologies, onTechnologyHover, onTechnologyClick, selectedTechnology, hoveredTechnology, needleEnabled, getOverrideFor, controlsRef }) => {
+}> = ({
+          technologies,
+          onTechnologyHover,
+          onTechnologyClick,
+          selectedTechnology,
+          hoveredTechnology,
+          needleEnabled,
+          getOverrideFor,
+          controlsRef
+      }) => {
     const cameraRef = useRef<THREE.PerspectiveCamera>(null);
     const needleRef = useRef<THREE.Line>(null);
     const [needleAngle, setNeedleAngle] = useState(150); // شروع از 150 درجه مثل دوبعدی
@@ -326,79 +391,68 @@ const Scene: React.FC<{
     };
 
     const adjustLabelPosition = (pos: [number, number, number], tech: Technology) => {
-        const override = getOverrideFor(tech);
-        if (override && override.mode === 'rel') {
-            return [pos[0] + (override.dx || 0), pos[1] + (override.dy || 0), pos[2] + (override.dz || 0)];
-        }
+        // const override = getOverrideFor(tech);
+        // if (override && override.mode === 'rel') {
+        //     return [pos[0] + (override.dx || 0), pos[1] + (override.dy || 0), pos[2] + (override.dz || 0)];
+        // }
 
-        let newPos = [...pos];
-        const minDistance = 1.0;
-        technologies.forEach(otherTech => {
-            if (otherTech.id !== tech.id) {
-                const otherPos = calculatePosition(otherTech);
-                const dx = newPos[0] - otherPos[0];
-                const dz = newPos[2] - otherPos[2];
-                const distance = Math.sqrt(dx * dx + dz * dz);
-                if (distance < minDistance) {
-                    const angle = Math.atan2(dz, dx);
-                    newPos[0] += Math.cos(angle) * 0.5;
-                    newPos[2] += Math.sin(angle) * 0.5;
-                    newPos[1] += 0.3;
-                }
-            }
-        });
-        return [newPos[0], newPos[1] + 0.45, newPos[2]];
+        // قرار دادن لیبل مستقیماً بالای نقطه با جابجایی عمودی ثابت
+        return [pos[0], pos[1] + 0.5, pos[2]]; // 0.5 واحد بالا
     };
 
     return (
         <>
-            <ambientLight intensity={0.5} />
-            <pointLight position={[10, 10, 10]} intensity={1} />
-            <OrbitControls ref={controlsRef} enablePan={true} enableZoom={true} target={[0, 0, 0]} />
+            <ambientLight intensity={0.5}/>
+            <pointLight position={[10, 10, 10]} intensity={1}/>
+            <OrbitControls ref={controlsRef} enablePan={true} enableZoom={true} target={[0, 0, 0]}/>
 
             {/* Inner radar sector */}
             <mesh rotation={[-Math.PI / 2, 0, (startAngleDeg - 90) * Math.PI / 180]}>
-                <ringGeometry args={[0, fourYearRadius, 64, 1, 0, arcSpan * Math.PI / 180]} />
-                <meshStandardMaterial color="#D0D8E233" transparent opacity={1} side={THREE.DoubleSide} />
+                <ringGeometry args={[0, fourYearRadius, 64, 1, 0, arcSpan * Math.PI / 180]}/>
+                <meshStandardMaterial color="#D0D8E233" transparent opacity={1} side={THREE.DoubleSide}/>
             </mesh>
 
             {/* Outer radar sector */}
             <mesh rotation={[-Math.PI / 2, 0, (startAngleDeg - 90) * Math.PI / 180]}>
-                <ringGeometry args={[fourYearRadius, maxRadius, 64, 1, 0, arcSpan * Math.PI / 180]} />
-                <meshStandardMaterial color="#F0F4F826" transparent opacity={1} side={THREE.DoubleSide} />
+                <ringGeometry args={[fourYearRadius, maxRadius, 64, 1, 0, arcSpan * Math.PI / 180]}/>
+                <meshStandardMaterial color="#F0F4F826" transparent opacity={1} side={THREE.DoubleSide}/>
             </mesh>
 
             {/* Background image */}
             <mesh rotation={[-Math.PI / 2, 0, 0]}>
-                <circleGeometry args={[maxRadius, 64]} />
-                <meshBasicMaterial map={backgroundTexture} transparent opacity={0.2} side={THREE.DoubleSide} />
+                <circleGeometry args={[maxRadius, 64]}/>
+                <meshBasicMaterial map={backgroundTexture} transparent opacity={0.1} side={THREE.DoubleSide}/>
             </mesh>
 
             {/* Time rings */}
             {[
-                { years: 2, radius: maxRadius * 0.2, color: '#A0A8B2' },
-                { years: 4, radius: maxRadius * 0.4, color: '#B0BAC5' },
-                { years: 6, radius: maxRadius * 0.6, color: '#C0CAD8' },
-                { years: 8, radius: maxRadius * 0.8, color: '#D0DCEB' },
-                { years: 10, radius: maxRadius, color: '#E0EDEF' },
+                {years: 2, radius: maxRadius * 0.2, color: '#A0A8B2'},
+                {years: 4, radius: maxRadius * 0.4, color: '#B0BAC5'},
+                {years: 6, radius: maxRadius * 0.6, color: '#C0CAD8'},
+                {years: 8, radius: maxRadius * 0.8, color: '#D0DCEB'},
+                {years: 10, radius: maxRadius, color: '#E0EDEF'},
             ].map((ring) => (
-                <Ring key={ring.years} args={[ring.radius - 0.01, ring.radius + 0.01, 64, 1, (startAngleDeg - 90) * Math.PI / 180, arcSpan * Math.PI / 180]} rotation={[-Math.PI / 2, 0, 0]}>
-                    <meshBasicMaterial color={ring.color} />
+                <Ring key={ring.years}
+                      args={[ring.radius - 0.01, ring.radius + 0.01, 64, 1, (startAngleDeg - 90) * Math.PI / 180, arcSpan * Math.PI / 180]}
+                      rotation={[-Math.PI / 2, 0, 0]}>
+                    <meshBasicMaterial color={ring.color}/>
                 </Ring>
             ))}
 
             {/* Edge texts for impact */}
-            <Billboard position={[Math.cos((startAngleDeg * Math.PI) / 180) * (maxRadius + 1), 0.1, Math.sin((startAngleDeg * Math.PI) / 180) * (maxRadius + 1)]}>
-                <Text fontSize={0.4} color="#2E2E2E">0% Impact</Text>
+            <Billboard
+                position={[Math.cos((startAngleDeg * Math.PI) / 180) * (maxRadius + 1), 0.1, Math.sin((startAngleDeg * Math.PI) / 180) * (maxRadius + 1)]}>
+                <Text fontSize={0.2} color="#2E2E2E">0% Impact</Text>
             </Billboard>
-            <Billboard position={[Math.cos((endAngleDeg * Math.PI) / 180) * (maxRadius + 1), 0.1, Math.sin((endAngleDeg * Math.PI) / 180) * (maxRadius + 1)]}>
-                <Text fontSize={0.4} color="#2E2E2E">100% Impact</Text>
+            <Billboard
+                position={[Math.cos((endAngleDeg * Math.PI) / 180) * (maxRadius + 1), 0.1, Math.sin((endAngleDeg * Math.PI) / 180) * (maxRadius + 1)]}>
+                <Text fontSize={0.2} color="#2E2E2E">100% Impact</Text>
             </Billboard>
 
             {/* Needle */}
             <line ref={needleRef}>
-                <bufferGeometry />
-                <lineBasicMaterial color="#17A398" linewidth={2} transparent opacity={trailOpacity} />
+                <bufferGeometry/>
+                <lineBasicMaterial color="#17A398" linewidth={3} transparent opacity={trailOpacity}/>
             </line>
 
             {/* Technologies points and labels */}
@@ -406,7 +460,7 @@ const Scene: React.FC<{
                 const pos = calculatePosition(tech);
                 const isSelected = selectedTechnology?.id === tech.id;
                 const isHovered = hoveredTechnology?.id === tech.id;
-                const scale = isSelected ? 1.5 : isHovered ? 1.2 : 1;
+                const scale = isSelected ? 1.4 : isHovered ? 1.2 : 1;
                 const labelPos = adjustLabelPosition(pos, tech);
 
                 return (
@@ -418,11 +472,13 @@ const Scene: React.FC<{
                             onPointerOver={() => onTechnologyHover(tech)}
                             onPointerOut={() => onTechnologyHover(null)}
                         >
-                            <sphereGeometry args={[0.1, 8, 8]} />
-                            <meshStandardMaterial color={isHovered || isSelected ? '#17A398' : '#FFFFFF'} emissive={isSelected ? '#17A398' : '#000000'} />
+                            <sphereGeometry args={[0.1, 8, 8]}/>
+                            <meshStandardMaterial color={isHovered || isSelected ? '#17A398' : '#000000'}
+                                                  emissive={isSelected ? '#17A398' : '#079a8f'}/>
                         </mesh>
                         <Billboard position={labelPos}>
-                            <Text fontSize={0.2 * scale} color={isSelected ? '#17A398' : '#2E2E2E'} anchorX="center" anchorY="middle">
+                            <Text fontSize={0.1 * scale} color={isSelected ? '#17A398' : '#2E2E2E'} anchorX="center"
+                                  anchorY="middle">
                                 {tech.name}
                             </Text>
                         </Billboard>
