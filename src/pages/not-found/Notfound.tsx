@@ -84,7 +84,7 @@ const Animated404 = () => {
 const NotFoundScene = () => {
     return (
         <Canvas
-            camera={{ position: [0, 0, 6], fov: 70 }} // fov بیشتر و position نزدیک‌تر برای موبایل (زاویه دید وسیع‌تر)
+            camera={{ position: [0, 0, 6], fov: 100 }} // fov بیشتر و position نزدیک‌تر برای موبایل (زاویه دید وسیع‌تر)
             gl={{ antialias: false, alpha: false, powerPreference: 'low-power' }} // optimize برای موبایل: antialias خاموش، low-power
             dpr={[1, 1.5]} // دستگاه‌های موبایل رزولوشن پایین‌تر برای عملکرد
         >
@@ -132,7 +132,7 @@ const NotFoundPage = () => {
             </motion.div>
 
             {/* محتوا responsive - متن کوچکتر در موبایل */}
-            <div dir={'rtl'} className="absolute bottom-4 left-1/2 transform -translate-x-1/2 text-center z-10 px-4 w-full max-w-md">
+            <div dir={'rtl'} className="absolute bottom-20 left-1/2 transform -translate-x-1/2 text-center z-10 px-4 w-full max-w-md">
                 <motion.h1
                     initial={{ opacity: 0, y: 30 }}
                     animate={{ opacity: 1, y: 0 }}
