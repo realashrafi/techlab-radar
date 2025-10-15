@@ -3,11 +3,11 @@ import Cookies from 'js-cookie';
 
 // ایجاد instance api (اینجا متمرکز)
 const api: AxiosInstance = axios.create({
-    baseURL: 'http://techlab.studionona.ir/api', // پایه URL
+    baseURL: 'https://techlab.studionona.ir/api', // پایه URL
     headers: {
         'accept': 'application/json',
         'Content-Type': 'application/json',
-        'X-CSRFTOKEN': 'aPZySGbBBWUKLEy29hpSzG5XFPELdTNSbQxJ0qZu0SgyFKK2LXoowSv1D6kVkARW', // اگر دینامیک نیازه، بعداً آپدیت کن
+        // 'X-CSRFTOKEN': 'yYLiwXe7SCQj1onX5G8uvIb808xZmB0PpQZdgAAuBPvG95COi0TkBn4OYbpQ2DQH', // اگر دینامیک نیازه، بعداً آپدیت کن
     },
 });
 
@@ -60,7 +60,7 @@ api.interceptors.response.use(
             try {
                 // درخواست refresh (با axios خام، چون ممکنه headerهای instance مشکل‌ساز باشه)
                 // اگر CSRF نیازه: headers: { 'X-CSRFTOKEN': Cookies.get('csrftoken') || '' }
-                const refreshResponse = await axios.post('http://techlab.studionona.ir/api/account/token/refresh/', {
+                const refreshResponse = await axios.post('https://techlab.studionona.ir/api/account/token/refresh/', {
                     refresh: refreshToken
                 });
 
