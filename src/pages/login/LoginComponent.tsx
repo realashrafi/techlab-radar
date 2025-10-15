@@ -1,39 +1,96 @@
-import React, {useState} from 'react';
-import {motion} from 'framer-motion';
+import React, { useState } from 'react';
+import { motion } from 'framer-motion';
 import Layout from "../../components/layout/Layout";
+import { AxiosError } from 'axios';
+import { useNavigate } from 'react-router';
+import Cookies from 'js-cookie';
+import api from "../../components/utils/apiClient";
+
 
 const LoginComponent = () => {
     const [mobile, setMobile] = useState('');
     const [password, setPassword] = useState('');
+    const [error, setError] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+    const navigate = useNavigate();
 
-    const handleSubmit = (e: any
-    ) => {
+    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        console.log('Mobile:', mobile, 'Password:', password);
+        setError('');
+        if (!mobile.match(/^09\d{9}$/)) {
+            setError('شماره موبایل باید 11 رقم و با 09 شروع شود');
+            return;
+        }
+        setIsLoading(true);
+        try {
+            // اختیاری: اگر CSRF دینامیک نیازه، قبل از درخواست آپدیت کن
+            // api.defaults.headers.common['X-CSRFTOKEN'] = Cookies.get('csrftoken') || 'aPZySGbBBWUKLEy29hpSzG5XFPELdTNSbQxJ0qZu0SgyFKK2LXoowSv1D6kVkARW';
+
+            // حذف موقت Authorization header برای درخواست لاگین
+            const currentAuth = api.defaults.headers.common['Authorization'];
+            delete api.defaults.headers.common['Authorization'];
+
+            let response;
+            try {
+                response = await api.post('/account/login/', {
+                    phone_number: mobile,
+                    password: password,
+                });
+            } finally {
+                // بازگرداندن Authorization (برای درخواست‌های بعدی)
+                api.defaults.headers.common['Authorization'] = currentAuth;
+            }
+            console.log('Success:', response.data);
+            // access: ۳۰ دقیقه (0.020833 روز)
+            Cookies.set('authToken', response.data.access, {
+                expires: 0.020833333,
+                secure: true, // در لوکال HTTP اگر تست می‌کنی، false کن
+                sameSite: 'strict',
+                path: '/' // اصلاح: '/' به جای '/*' (path باید string ساده باشه، نه wildcard)
+            });
+            // refresh: ۷ روز
+            Cookies.set('refreshToken', response.data.refresh, {
+                expires: 7,
+                secure: true,
+                sameSite: 'strict',
+                path: '/'
+            });
+
+            // آپدیت دائمی header برای درخواست‌های بعدی (بعد از لاگین)
+            api.defaults.headers.common['Authorization'] = `Bearer ${response.data.access}`;
+
+            navigate('/admin/dashboard');
+        } catch (err) {
+            if (err) {
+                setError('خطای سرور: ورود ناموفق');
+            } else {
+                setError('خطای شبکه یا ناشناخته');
+            }
+            console.error('Error:', err);
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (
         <Layout>
-            <div
-                className="min-h-[calc(100vh-80px)] bg-[url('/iran2.jpeg')] bg-cover bg-center flex items-center justify-center relative">
+            <div className="min-h-[calc(100vh-80px)] bg-[url('/iran2.jpeg')] bg-cover bg-center flex items-center justify-center relative">
                 <div className="absolute inset-0 bg-white/30 backdrop-blur-sm"></div>
                 <motion.div
-                    initial={{opacity: 0, y: -50}}
-                    animate={{opacity: 1, y: 0}}
-                    transition={{duration: 0.5}}
+                    initial={{ opacity: 0, y: -50 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5 }}
                     dir={'rtl'}
                     className="bg-white/70 backdrop-blur-[4px] -mt-20 p-8 rounded-xl shadow-lg w-full max-w-md relative z-10"
                 >
-                    <h2 className="text-2xl font-bold mb-6 text-center text-[#005BBB]">
-                        ورود به سیستم
-                    </h2>
+                    <h2 className="text-2xl font-bold mb-6 text-center text-[#005BBB]">ورود به سیستم</h2>
                     <form onSubmit={handleSubmit}>
                         <div className="mb-4">
                             <label className="block text-sm font-medium mb-2 text-[#005BBB]">
                                 شماره موبایل
                             </label>
                             <motion.input
-                                whileFocus={{scale: 1.02}}
+                                whileFocus={{ scale: 1.02 }}
                                 type="tel"
                                 dir={'rtl'}
                                 value={mobile}
@@ -48,7 +105,7 @@ const LoginComponent = () => {
                                 رمز عبور
                             </label>
                             <motion.input
-                                whileFocus={{scale: 1.02}}
+                                whileFocus={{ scale: 1.02 }}
                                 type="password"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
@@ -57,13 +114,15 @@ const LoginComponent = () => {
                                 required
                             />
                         </div>
+                        {error && <p className="text-red-500 mb-4 text-center">{error}</p>}
                         <motion.button
-                            whileHover={{scale: 1.05, backgroundColor: '#e55e30'}}
-                            whileTap={{scale: 0.95}}
+                            whileHover={{ scale: 1.05, backgroundColor: '#e55e30' }}
+                            whileTap={{ scale: 0.95 }}
                             type="submit"
+                            disabled={isLoading}
                             className="w-full py-2 px-4 rounded-lg text-white font-semibold bg-[#F67242] transition-all duration-300"
                         >
-                            ورود
+                            {isLoading ? 'در حال ورود...' : 'ورود'}
                         </motion.button>
                     </form>
                 </motion.div>
