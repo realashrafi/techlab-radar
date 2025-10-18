@@ -160,7 +160,7 @@ export const fetchTechnologies = async (selectedKeys: string[]): Promise<{
             .filter(Boolean)
             .join('&');
 
-        const response = await fetch(`http://45.149.76.129/api/project/technologies/?${queryParams}`, {
+        const response = await fetch(`https://techlab.studionona.ir/api/project/technologies/?${queryParams}`, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
