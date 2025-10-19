@@ -12,6 +12,7 @@ import {CustomExportControls} from '../tools/CustomExportControls';
 import {labelOverrides, LabelOverride} from './labelOverrides';
 import {fetchTechnologies} from './fetchTechnologies';
 import {motion, AnimatePresence} from 'framer-motion';
+import Loading from "../layout/Loading";
 
 // Utility functions
 const areArraysEqual = (arr1: string[], arr2: string[]): boolean => {
@@ -148,11 +149,7 @@ export function RadarChart3D({
     const highImpactTechnologies = summary.high_impact;
     const nearTermTechnologies = summary.near_term;
 
-    const LoadingSpinner = () => (
-        <div className="flex items-center justify-center h-full">
-            <p className="ml-4 text-lg text-[#F67242]">Loading...</p>
-        </div>
-    );
+    const LoadingSpinner = () => (<Loading/>);
 
     const Modal = ({ tech, onClose }: { tech: Technology; onClose: () => void }) => {
         // انیمیشن‌ها

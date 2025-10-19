@@ -7,6 +7,7 @@ import AccordionMenu from '../tools/AccordionMenu';
 import { CustomExportControls } from '../tools/CustomExportControls';
 import { labelOverrides, LabelOverride } from './labelOverrides';
 import { fetchTechnologies } from './fetchTechnologies';
+import Loading from "../layout/Loading";
 
 // Utility to compare arrays for equality
 const areArraysEqual = (arr1: string[], arr2: string[]): boolean => {
@@ -981,11 +982,7 @@ export function RadarChart({
     );
 
     // Loading spinner component
-    const LoadingSpinner = () => (
-        <div className="flex items-center justify-center h-full">
-            <p className="ml-4 text-lg text-[#F67242]">Loading...</p>
-        </div>
-    );
+    const LoadingSpinner = () => (<Loading/>);
 
     return (
         <div ref={containerRef} className="w-full min-h-[calc(100vh-80px)] flex flex-col items-center justify-center rounded-lg relative overflow-hidden">
