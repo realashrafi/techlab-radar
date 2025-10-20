@@ -145,7 +145,8 @@ export function RadarChart3D({
         if (controlsRef.current) controlsRef.current.reset();
     };
 
-    const totalTechnologies = summary.total_techonologies;
+    const totalTechnologies = summary.total_technologies;
+
     const highImpactTechnologies = summary.high_impact;
     const nearTermTechnologies = summary.near_term;
 

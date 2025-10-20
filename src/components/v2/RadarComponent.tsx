@@ -86,7 +86,7 @@ export function RadarChart({
     const [panOffset, setPanOffset] = useState(externalPanOffset);
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [lastPinchDistance, setLastPinchDistance] = useState<number | null>(null);
-
+    const [baseMenuItems, setBaseMenuItems] = useState<MenuItem[]>([]);
     // Panning/editing state
     const [isPanning, setIsPanning] = useState(false);
     const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
@@ -114,7 +114,7 @@ export function RadarChart({
     };
 
     // Statistics from summary
-    const totalTechnologies = summary.total_techonologies;
+    const totalTechnologies = summary.total_technologies;
     const highImpactTechnologies = summary.high_impact;
     const nearTermTechnologies = summary.near_term;
 
@@ -123,30 +123,35 @@ export function RadarChart({
 
     // Optimized selection change handler
     const handleSelectionChange = useCallback((newKeys: string[]) => {
+        // 🔥 Split اگه کاما داره
+        const flatKeys = newKeys.length === 1 && newKeys[0].includes(',')
+            ? newKeys[0].split(',').map(k => k.trim())
+            : newKeys;
+
         setSelectedKeys((prev) => {
-            if (areArraysEqual(prev, newKeys)) return prev;
-            return newKeys;
+            if (areArraysEqual(prev, flatKeys)) return prev;
+            return flatKeys; // ["AI", "E-commerce"]
         });
     }, []);
 
     // Fetch data
     useEffect(() => {
         setIsLoading(true);
-        setError(null);
         debouncedFetchTechnologies(selectedKeys)
             .then((data) => {
                 setApiTechnologies(data.technologies);
                 setSummary(data.summary);
-                if (!initialMenuItemsRef.current) {
-                    initialMenuItemsRef.current = data.menuItems;
+
+                if (selectedKeys.length === 0) {
+                    setBaseMenuItems(data.menuItems);
                     setMenuItems(data.menuItems);
-                } else if (!areMenuItemsEqual(initialMenuItemsRef.current, data.menuItems)) {
-                    initialMenuItemsRef.current = data.menuItems;
-                    setMenuItems(data.menuItems);
+                } else {
+                    setMenuItems(baseMenuItems); // 🔥 حفظ menuItems
                 }
+
                 setIsLoading(false);
             })
-            .catch((err) => {
+            .catch(err => {
                 setError(err.message);
                 setIsLoading(false);
             });

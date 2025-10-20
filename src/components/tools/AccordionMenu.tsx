@@ -24,9 +24,9 @@ const AccordionMenu: React.FC<AccordionMenuProps> = ({ items, selectedKeys, onSe
     // مدیریت انتخاب یا لغو انتخاب یک فیلتر
     const toggleItem = (key: string, checked: boolean) => {
         const newSelected = checked
-            ? [...new Set([...selectedKeys, key])] // اضافه کردن کلید
-            : selectedKeys.filter((k) => k !== key); // حذف کلید
-        onSelectionChange(newSelected);
+            ? [...new Set([...selectedKeys, key])]
+            : selectedKeys.filter((k) => k !== key);
+        onSelectionChange(newSelected);  // بدون join، array تخت بفرست
     };
 
     const toggleAccordion = (index: string) => {
