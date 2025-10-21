@@ -19,6 +19,19 @@ function Layout({ children }: { children: React.ReactNode }) {
             <GridBackgroundDemo>
                 {children}
             </GridBackgroundDemo>
+            <div className="w-full h-20 bg-white/70 backdrop-blur-[4px] shadow border-t border-black/10">
+                <div className=" mx-auto h-full flex items-center justify-between px-4">
+        <span className="text-sm text-gray-600">
+          © {new Date().getFullYear()} Logistics Technology Radar All Rights Reserved
+        </span>
+                    <Link
+                        to={'/admin/dashboard'}
+                        className="bg-gray-50 text-gray-600 px-4 py-2 rounded-md hover:bg-gray-200 transition-colors"
+                    >
+                        Admin Dashboard
+                    </Link>
+                </div>
+            </div>
         </div>
     );
 }
