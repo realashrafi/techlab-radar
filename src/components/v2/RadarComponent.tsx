@@ -15,21 +15,6 @@ const areArraysEqual = (arr1: string[], arr2: string[]): boolean => {
     return arr1.every((val, index) => val === arr2[index]);
 };
 
-// Deep comparison for menuItems
-const areMenuItemsEqual = (items1: MenuItem[], items2: MenuItem[]): boolean => {
-    if (items1.length !== items2.length) return false;
-    return items1.every((item1, index) => {
-        const item2 = items2[index];
-        if (item1.key !== item2.key || item1.title !== item2.title) return false;
-        if (!item1.children && !item2.children) return true;
-        if (!item1.children || !item2.children || item1.children.length !== item2.children.length) return false;
-        return item1.children.every((child1, childIndex) => {
-            const child2 = item2.children![childIndex];
-            return child1.key === child2.key && child1.title === child2.title;
-        });
-    });
-};
-
 // Debounce function
 const debounce = <F extends (...args: any[]) => any>(func: F, wait: number) => {
     let timeout: NodeJS.Timeout | null = null;
@@ -65,9 +50,11 @@ export function RadarChart({
                                onPanChange,
                            }: RadarChartProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
+    const needleCanvasRef = useRef<HTMLCanvasElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const animationRef = useRef<number>(0);
-    const initialMenuItemsRef = useRef<MenuItem[] | null>(null); // Store initial menuItems
+    const needleAngleRef = useRef<number>(150);
+    const trailOpacityRef = useRef<number>(1);
 
     const [apiTechnologies, setApiTechnologies] = useState<Technology[]>([]);
     const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
@@ -79,76 +66,57 @@ export function RadarChart({
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
-    const [needleAngle, setNeedleAngle] = useState(150);
-    const [trailOpacity, setTrailOpacity] = useState(1);
     const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
     const [zoomLevel, setZoomLevel] = useState(externalZoomLevel);
     const [panOffset, setPanOffset] = useState(externalPanOffset);
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [lastPinchDistance, setLastPinchDistance] = useState<number | null>(null);
     const [baseMenuItems, setBaseMenuItems] = useState<MenuItem[]>([]);
-    // Panning/editing state
     const [isPanning, setIsPanning] = useState(false);
     const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
-
-    // Positions for points and labels
     const [techPositions, setTechPositions] = useState<Record<string, { x: number; y: number }>>({});
     const [labelPositions, setLabelPositions] = useState<
         Record<string, { x: number; y: number; lineStartX: number; lineStartY: number }>
     >({});
-
-    // Manual label editing
     const [editLabelsMode, setEditLabelsMode] = useState(false);
     const draggingLabelRef = useRef<{ id: string; offsetX: number; offsetY: number } | null>(null);
     const [localOverrides, setLocalOverrides] = useState<Record<string, LabelOverride>>({});
     const labelBoxesRef = useRef<Record<string, { x: number; y: number; w: number; h: number }>>({});
-
-    // Modal
     const [modalTech, setModalTech] = useState<Technology | null>(null);
 
-    // Helper: Get override (local first, then file)
     const getOverrideFor = (tech: Technology): LabelOverride | null => {
         const byId = localOverrides[String(tech.id)] || labelOverrides[String(tech.id)];
         const byName = localOverrides[tech.name] || labelOverrides[tech.name];
         return byId || byName || null;
     };
 
-    // Statistics from summary
     const totalTechnologies = summary.total_technologies;
     const highImpactTechnologies = summary.high_impact;
     const nearTermTechnologies = summary.near_term;
 
-    // Debounced fetch
     const debouncedFetchTechnologies = useCallback(debounce(fetchTechnologies, 300), []);
 
-    // Optimized selection change handler
     const handleSelectionChange = useCallback((newKeys: string[]) => {
-        // 🔥 Split اگه کاما داره
         const flatKeys = newKeys.length === 1 && newKeys[0].includes(',')
             ? newKeys[0].split(',').map(k => k.trim())
             : newKeys;
 
         setSelectedKeys((prev) => {
             if (areArraysEqual(prev, flatKeys)) return prev;
-            return flatKeys; // ["AI", "E-commerce"]
+            return flatKeys;
         });
     }, []);
 
-    // Fetch data
     useEffect(() => {
         setIsLoading(true);
         debouncedFetchTechnologies(selectedKeys)
             .then((data) => {
                 setApiTechnologies(data.technologies);
                 setSummary(data.summary);
-
                 if (selectedKeys.length === 0) {
                     setBaseMenuItems(data.menuItems);
                     setMenuItems(data.menuItems);
-                } else {
-                    setMenuItems(baseMenuItems); // 🔥 حفظ menuItems
                 }
-
                 setIsLoading(false);
             })
             .catch(err => {
@@ -157,8 +125,6 @@ export function RadarChart({
             });
     }, [selectedKeys, debouncedFetchTechnologies]);
 
-    // Rest of the useEffect hooks and other functions remain the same
-    // Dimensions
     useEffect(() => {
         const update = () => {
             if (!containerRef.current) return;
@@ -174,44 +140,14 @@ export function RadarChart({
         };
     }, []);
 
-    // Needle animation
-    const animateNeedle = useCallback(() => {
-        if (!needleEnabled || !dimensions.width) return;
-        setNeedleAngle((prev) => {
-            const inc = 0.5;
-            let next = prev + inc;
-            let n = next % 360;
-            if (n < 0) n += 360;
-            const inArc = (n >= 150 && n <= 360) || (n >= 0 && n <= 30);
-            if (next >= 390 || !inArc) {
-                setTrailOpacity(0);
-                setTimeout(() => {
-                    setTrailOpacity(1);
-                    setNeedleAngle(150);
-                }, 200);
-                return 150;
-            }
-            if (next >= 360) next -= 360;
-            return next;
-        });
-        animationRef.current = requestAnimationFrame(animateNeedle);
-    }, [needleEnabled, dimensions.width]);
+    const animateZoom = useCallback((targetZoom: number, mouseX: number, mouseY: number) => {
+        const steps = 10; // تعداد step برای animation smooth
+        const stepDelta = (targetZoom - zoomLevel) / steps;
+        let currentStep = 0;
 
-    useEffect(() => {
-        if (needleEnabled && dimensions.width) {
-            animationRef.current = requestAnimationFrame(animateNeedle);
-        }
-        return () => animationRef.current && cancelAnimationFrame(animationRef.current);
-    }, [animateNeedle, needleEnabled, dimensions.width]);
-
-    // Zoom/pan
-    const handleZoom = useCallback(
-        (delta: number, clientX: number, clientY: number) => {
-            if (!canvasRef.current) return;
-            const rect = canvasRef.current.getBoundingClientRect();
-            const mouseX = clientX - rect.left;
-            const mouseY = clientY - rect.top;
-            const newZoom = Math.min(Math.max(zoomLevel + delta, 0.5), 3);
+        const frame = () => {
+            if (currentStep >= steps) return;
+            const newZoom = zoomLevel + stepDelta;
             const zx = (mouseX - panOffset.x) / zoomLevel;
             const zy = (mouseY - panOffset.y) / zoomLevel;
             const newPanX = mouseX - zx * newZoom;
@@ -219,8 +155,22 @@ export function RadarChart({
             setZoomLevel(newZoom);
             setPanOffset({ x: newPanX, y: newPanY });
             onPanChange?.({ x: newPanX, y: newPanY });
+            currentStep++;
+            requestAnimationFrame(frame);
+        };
+        requestAnimationFrame(frame);
+    }, [zoomLevel, panOffset, onPanChange]);
+
+    const handleZoom = useCallback(
+        (delta: number, clientX: number, clientY: number) => {
+            if (!canvasRef.current) return;
+            const rect = canvasRef.current.getBoundingClientRect();
+            const mouseX = clientX - rect.left;
+            const mouseY = clientY - rect.top;
+            const newZoom = Math.min(Math.max(zoomLevel + delta, 0.5), 3);
+            animateZoom(newZoom, mouseX, mouseY); // استفاده از animation smooth
         },
-        [zoomLevel, panOffset, onPanChange]
+        [zoomLevel, animateZoom]
     );
 
     const handleResetZoom = () => {
@@ -284,7 +234,6 @@ export function RadarChart({
         };
     }, [handleWheel, handleTouchStart, handleTouchMove, handleTouchEnd]);
 
-    // Reset label cache on layout change
     useEffect(() => {
         setLabelPositions({});
     }, [apiTechnologies, zoomLevel, dimensions.width, dimensions.height]);
@@ -296,22 +245,22 @@ export function RadarChart({
     }
 
     const handleZoomIn = () => {
-        if (!canvasRef.current) return;
+        if (!canvasRef.current || zoomLevel >= 3) return;
         const rect = canvasRef.current.getBoundingClientRect();
-        handleZoom(0.1, rect.left + dimensions.width / 2, rect.top + dimensions.height / 2);
+        handleZoom(0.1, rect.left + rect.width / 2, rect.top + rect.height / 2);
     };
 
     const handleZoomOut = () => {
-        if (!canvasRef.current) return;
+        if (!canvasRef.current || zoomLevel <= 0.5) return;
         const rect = canvasRef.current.getBoundingClientRect();
-        handleZoom(-0.1, rect.left + dimensions.width / 2, rect.top + dimensions.height / 2);
+        handleZoom(-0.1, rect.left + rect.width / 2, rect.top + rect.height / 2);
     };
 
     const pickNearestLabel = (worldX: number, worldY: number): string | null => {
         let bestId: string | null = null;
         let bestD = Infinity;
         for (const [id, pos] of Object.entries(labelPositions)) {
-            const d = Math.hypot(worldX - (pos as any).x, worldY - (pos as any).y);
+            const d = Math.hypot(worldX - pos.x, worldY - pos.y);
             if (d < bestD) {
                 bestD = d;
                 bestId = id;
@@ -320,7 +269,6 @@ export function RadarChart({
         return bestD <= 40 ? bestId : null;
     };
 
-    // Automatic label placement (when no override)
     const placeLabelWithCollision = (
         ctx: CanvasRenderingContext2D,
         pointX: number,
@@ -423,7 +371,6 @@ export function RadarChart({
         return score;
     }
 
-    // Background image
     const backgroundImage = React.useMemo(() => {
         const img = new Image();
         img.src = '/iran2.jpeg';
@@ -436,6 +383,7 @@ export function RadarChart({
         };
     }, [backgroundImage]);
 
+    // تابع رندر رادار (فقط وقتی deps تغییر کنه کال می‌شه)
     useEffect(() => {
         if (!canvasRef.current || !dimensions.width || !dimensions.height) return;
         const canvas = canvasRef.current;
@@ -447,384 +395,394 @@ export function RadarChart({
         canvas.height = dimensions.height * dpr;
         ctx.scale(dpr, dpr);
 
-        const renderRadar = () => {
-            ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr);
+        ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr);
+        ctx.save();
+        ctx.translate(panOffset.x, panOffset.y);
+        ctx.scale(zoomLevel, zoomLevel);
 
+        const centerX = dimensions.width / 2;
+        const centerY = dimensions.height / 2;
+        const maxRadius = Math.min(dimensions.width / 2 - 50, dimensions.height / 2 - 50);
+        const startAngle = (150 * Math.PI) / 180;
+        const endAngle = (30 * Math.PI) / 180;
+        const fourYearRadius = maxRadius * 0.4;
+
+        const innerGradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, fourYearRadius);
+        innerGradient.addColorStop(0, '#D0D8E233');
+        innerGradient.addColorStop(1, '#A0A8B233');
+
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, fourYearRadius, startAngle, endAngle, false);
+        ctx.arc(centerX, centerY, 0, endAngle, startAngle, true);
+        ctx.closePath();
+        ctx.fillStyle = innerGradient;
+        ctx.fill();
+
+        const outerGradient = ctx.createRadialGradient(centerX, centerY, fourYearRadius, centerX, centerY, maxRadius);
+        outerGradient.addColorStop(0, '#F0F4F826');
+        outerGradient.addColorStop(1, '#C0C8D226');
+
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, maxRadius, startAngle, endAngle, false);
+        ctx.arc(centerX, centerY, fourYearRadius, endAngle, startAngle, true);
+        ctx.closePath();
+        ctx.fillStyle = outerGradient;
+        ctx.fill();
+
+        if (backgroundImage.complete && backgroundImage.naturalWidth !== 0) {
             ctx.save();
-            ctx.translate(panOffset.x, panOffset.y);
-            ctx.scale(zoomLevel, zoomLevel);
-
-            const centerX = dimensions.width / 2;
-            const centerY = dimensions.height / 2;
-            const maxRadius = Math.min(dimensions.width / 2 - 50, dimensions.height / 2 - 50);
-            const startAngle = (150 * Math.PI) / 180;
-            const endAngle = (30 * Math.PI) / 180;
-            const fourYearRadius = maxRadius * 0.4;
-
-            // innerGradient for 0-4 years
-            const innerGradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, fourYearRadius);
-            innerGradient.addColorStop(0, '#D0D8E233');
-            innerGradient.addColorStop(1, '#A0A8B233');
-
-            ctx.beginPath();
-            ctx.arc(centerX, centerY, fourYearRadius, startAngle, endAngle, false);
-            ctx.arc(centerX, centerY, 0, endAngle, startAngle, true);
-            ctx.closePath();
-            ctx.fillStyle = innerGradient;
-            ctx.fill();
-
-            // outerGradient for 4+ years
-            const outerGradient = ctx.createRadialGradient(centerX, centerY, fourYearRadius, centerX, centerY, maxRadius);
-            outerGradient.addColorStop(0, '#F0F4F826');
-            outerGradient.addColorStop(1, '#C0C8D226');
-
             ctx.beginPath();
             ctx.arc(centerX, centerY, maxRadius, startAngle, endAngle, false);
             ctx.arc(centerX, centerY, fourYearRadius, endAngle, startAngle, true);
             ctx.closePath();
-            ctx.fillStyle = outerGradient;
-            ctx.fill();
+            ctx.clip();
 
-            // Background
-            if (backgroundImage.complete && backgroundImage.naturalWidth !== 0) {
-                ctx.save();
-                ctx.beginPath();
-                ctx.arc(centerX, centerY, maxRadius, startAngle, endAngle, false);
-                ctx.arc(centerX, centerY, fourYearRadius, endAngle, startAngle, true);
-                ctx.closePath();
-                ctx.clip();
+            const worldLeft = -panOffset.x / zoomLevel;
+            const worldTop = -panOffset.y / zoomLevel;
+            const worldWidth = dimensions.width / zoomLevel;
+            const worldHeight = dimensions.height / zoomLevel;
 
-                const worldLeft = -panOffset.x / zoomLevel;
-                const worldTop = -panOffset.y / zoomLevel;
-                const worldWidth = dimensions.width / zoomLevel;
-                const worldHeight = dimensions.height / zoomLevel;
+            const imgAspect = backgroundImage.naturalWidth / backgroundImage.naturalHeight;
+            const viewAspect = worldWidth / worldHeight;
+            let drawWidth, drawHeight, offsetX, offsetY;
 
-                const imgAspect = backgroundImage.naturalWidth / backgroundImage.naturalHeight;
-                const viewAspect = worldWidth / worldHeight;
-                let drawWidth, drawHeight, offsetX, offsetY;
-
-                if (imgAspect > viewAspect) {
-                    drawHeight = worldHeight;
-                    drawWidth = drawHeight * imgAspect;
-                    offsetX = worldLeft - (drawWidth - worldWidth) / 2;
-                    offsetY = worldTop;
-                } else {
-                    drawWidth = worldWidth;
-                    drawHeight = drawWidth / imgAspect;
-                    offsetX = worldLeft;
-                    offsetY = worldTop - (drawHeight - worldHeight) / 2;
-                }
-
-                ctx.globalAlpha = 0.2;
-                ctx.drawImage(backgroundImage, offsetX, offsetY, drawWidth, drawHeight);
-
-                const fadeGradient = ctx.createRadialGradient(centerX, centerY, fourYearRadius, centerX, centerY, maxRadius);
-                fadeGradient.addColorStop(0, 'rgba(255, 255, 255, 0)');
-                fadeGradient.addColorStop(0.7, 'rgba(255, 255, 255, 0.3)');
-                fadeGradient.addColorStop(1, 'rgba(255, 255, 255, 0.5)');
-
-                ctx.globalAlpha = 1;
-                ctx.fillStyle = fadeGradient;
-                ctx.beginPath();
-                ctx.arc(centerX, centerY, maxRadius, startAngle, endAngle, false);
-                ctx.arc(centerX, centerY, fourYearRadius, endAngle, startAngle, true);
-                ctx.closePath();
-                ctx.fill();
-
-                ctx.restore();
+            if (imgAspect > viewAspect) {
+                drawHeight = worldHeight;
+                drawWidth = drawHeight * imgAspect;
+                offsetX = worldLeft - (drawWidth - worldWidth) / 2;
+                offsetY = worldTop;
+            } else {
+                drawWidth = worldWidth;
+                drawHeight = drawWidth / imgAspect;
+                offsetX = worldLeft;
+                offsetY = worldTop - (drawHeight - worldHeight) / 2;
             }
 
-            // Simple radial lines
-            ctx.strokeStyle = '#E5E7EB';
-            ctx.lineWidth = 1;
-            ctx.globalAlpha = 0.3;
-            const divisions = 10,
-                angleStep = 24;
-            for (let i = 0; i <= divisions; i++) {
-                const radarAngle = 150 + i * angleStep;
-                const a = (radarAngle * Math.PI) / 180;
-                ctx.beginPath();
-                ctx.moveTo(centerX, centerY);
-                ctx.lineTo(centerX + Math.cos(a) * maxRadius, centerY + Math.sin(a) * maxRadius);
-                ctx.stroke();
-            }
+            ctx.globalAlpha = 0.2;
+            ctx.drawImage(backgroundImage, offsetX, offsetY, drawWidth, drawHeight);
+
+            const fadeGradient = ctx.createRadialGradient(centerX, centerY, fourYearRadius, centerX, centerY, maxRadius);
+            fadeGradient.addColorStop(0, 'rgba(255, 255, 255, 0)');
+            fadeGradient.addColorStop(0.7, 'rgba(255, 255, 255, 0.3)');
+            fadeGradient.addColorStop(1, 'rgba(255, 255, 255, 0.5)');
+
             ctx.globalAlpha = 1;
-
-            // Time rings
-            const rings = [
-                { years: 2, radius: maxRadius * 0.2, color: '#A0A8B2' },
-                { years: 4, radius: maxRadius * 0.4, color: '#B0BAC5' },
-                { years: 6, radius: maxRadius * 0.6, color: '#C0CAD8' },
-                { years: 8, radius: maxRadius * 0.8, color: '#D0DCEB' },
-                { years: 10, radius: maxRadius, color: '#E0EDEF' },
-            ];
-            rings.forEach((ring) => {
-                ctx.beginPath();
-                ctx.arc(centerX, centerY, ring.radius, startAngle, endAngle, false);
-                ctx.strokeStyle = ring.color;
-                ctx.lineWidth = 0.5;
-                ctx.stroke();
-                ctx.fillStyle = '#2E2E2E';
-                ctx.globalAlpha = 0.8;
-                ctx.font = '10px Inter, sans-serif';
-                ctx.textAlign = 'center';
-                ctx.fillText(`${ring.years}yr`, centerX, centerY - ring.radius - 8);
-            });
-
-            // Gradient ring around radar
-            const gradientRingRadius = maxRadius + 20;
-            const gradientRingWidth = 12;
-            const impactGradient = ctx.createLinearGradient(
-                centerX + Math.cos(startAngle) * gradientRingRadius,
-                centerY + Math.sin(startAngle) * gradientRingRadius,
-                centerX + Math.cos(endAngle) * gradientRingRadius,
-                centerY + Math.sin(endAngle) * gradientRingRadius
-            );
-            impactGradient.addColorStop(0, '#E8F4F8');
-            impactGradient.addColorStop(0.5, '#B8D4E3');
-            impactGradient.addColorStop(1, '#17A398');
-
+            ctx.fillStyle = fadeGradient;
             ctx.beginPath();
-            ctx.arc(centerX, centerY, gradientRingRadius, startAngle, endAngle, false);
-            ctx.arc(centerX, centerY, gradientRingRadius - gradientRingWidth, endAngle, startAngle, true);
+            ctx.arc(centerX, centerY, maxRadius, startAngle, endAngle, false);
+            ctx.arc(centerX, centerY, fourYearRadius, endAngle, startAngle, true);
             ctx.closePath();
-            ctx.fillStyle = impactGradient;
-            ctx.globalAlpha = 0.8;
             ctx.fill();
 
+            ctx.restore();
+        }
+
+        ctx.strokeStyle = '#E5E7EB';
+        ctx.lineWidth = 1;
+        ctx.globalAlpha = 0.3;
+        const divisions = 10,
+            angleStep = 24;
+        for (let i = 0; i <= divisions; i++) {
+            const radarAngle = 150 + i * angleStep;
+            const a = (radarAngle * Math.PI) / 180;
             ctx.beginPath();
-            ctx.arc(centerX, centerY, gradientRingRadius, startAngle, endAngle, false);
-            ctx.strokeStyle = '#D1D5DB';
-            ctx.lineWidth = 1;
-            ctx.globalAlpha = 0.4;
+            ctx.moveTo(centerX, centerY);
+            ctx.lineTo(centerX + Math.cos(a) * maxRadius, centerY + Math.sin(a) * maxRadius);
+            ctx.stroke();
+        }
+        ctx.globalAlpha = 1;
+
+        const rings = [
+            { years: 2, radius: maxRadius * 0.2, color: '#A0A8B2' },
+            { years: 4, radius: maxRadius * 0.4, color: '#B0BAC5' },
+            { years: 6, radius: maxRadius * 0.6, color: '#C0CAD8' },
+            { years: 8, radius: maxRadius * 0.8, color: '#D0DCEB' },
+            { years: 10, radius: maxRadius, color: '#E0EDEF' },
+        ];
+        rings.forEach((ring) => {
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, ring.radius, startAngle, endAngle, false);
+            ctx.strokeStyle = ring.color;
+            ctx.lineWidth = 0.5;
+            ctx.stroke();
+            ctx.fillStyle = '#2E2E2E';
+            ctx.globalAlpha = 0.8;
+            ctx.font = '10px Inter, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(`${ring.years}yr`, centerX, centerY - ring.radius - 8);
+        });
+
+        const gradientRingRadius = maxRadius + 20;
+        const gradientRingWidth = 12;
+        const impactGradient = ctx.createLinearGradient(
+            centerX + Math.cos(startAngle) * gradientRingRadius,
+            centerY + Math.sin(startAngle) * gradientRingRadius,
+            centerX + Math.cos(endAngle) * gradientRingRadius,
+            centerY + Math.sin(endAngle) * gradientRingRadius
+        );
+        impactGradient.addColorStop(0, '#E8F4F8');
+        impactGradient.addColorStop(0.5, '#B8D4E3');
+        impactGradient.addColorStop(1, '#17A398');
+
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, gradientRingRadius, startAngle, endAngle, false);
+        ctx.arc(centerX, centerY, gradientRingRadius - gradientRingWidth, endAngle, startAngle, true);
+        ctx.closePath();
+        ctx.fillStyle = impactGradient;
+        ctx.globalAlpha = 0.8;
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, gradientRingRadius, startAngle, endAngle, false);
+        ctx.strokeStyle = '#D1D5DB';
+        ctx.lineWidth = 1;
+        ctx.globalAlpha = 0.4;
+        ctx.stroke();
+
+        ctx.fillStyle = '#2E2E2E';
+        ctx.globalAlpha = 0.7;
+        ctx.font = '12px Inter, sans-serif';
+        ctx.fillText('0% Impact', centerX + Math.cos(startAngle) * (maxRadius + 35), centerY + Math.sin(startAngle) * (maxRadius + 35) + 15);
+        ctx.fillText('100% Impact', centerX + Math.cos(endAngle) * (maxRadius + 35), centerY + Math.sin(endAngle) * (maxRadius + 35) + 15);
+        ctx.globalAlpha = 1;
+
+        const arcSpan = 240,
+            startRadarAngle = 150;
+        const newPositions: Record<string, { x: number; y: number }> = {};
+        const occupiedLabels: { x: number; y: number; width: number; height: number }[] = [];
+
+        const sorted = [...apiTechnologies].sort((a, b) => {
+            const ra = Math.min(a.timeline / 10, 1);
+            const rb = Math.min(b.timeline / 10, 1);
+            if (rb !== ra) return rb - ra;
+            return startRadarAngle + (a.impact / 100) * arcSpan - (startRadarAngle + (b.impact / 100) * arcSpan);
+        });
+
+        sorted.forEach((tech) => {
+            const impactAngle = startRadarAngle + (tech.impact / 100) * arcSpan;
+            const a = ((impactAngle % 360) * Math.PI) / 180;
+            const r = Math.min(tech.timeline / 10, 1) * maxRadius;
+            newPositions[tech.id] = { x: centerX + Math.cos(a) * r, y: centerY + Math.sin(a) * r };
+        });
+
+        Object.values(newPositions).forEach((p) => {
+            const sz = 28;
+            occupiedLabels.push({ x: p.x - sz / 2, y: p.y - sz / 2, width: sz, height: sz });
+        });
+
+        setTechPositions(newPositions);
+        labelBoxesRef.current = {};
+
+        sorted.forEach((tech) => {
+            const pos = newPositions[tech.id];
+            if (!pos) return;
+            const x = pos.x,
+                y = pos.y;
+
+            const isSelected = selectedTechnology && String(selectedTechnology.id) === String(tech.id);
+            const isHovered = hoveredTechnology && String(hoveredTechnology.id) === String(tech.id);
+            const visualScale = isSelected ? 1.5 : isHovered ? 1.2 : 1;
+
+            ctx.save();
+            ctx.globalAlpha = isSelected || isHovered ? 1 : 0.9;
+            ctx.beginPath();
+            ctx.arc(x, y, 6 * visualScale, 0, 2 * Math.PI);
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fill();
+            ctx.strokeStyle = '#17A398';
+            ctx.lineWidth = 2;
             ctx.stroke();
 
-            // Edge text
-            ctx.fillStyle = '#2E2E2E';
-            ctx.globalAlpha = 0.7;
-            ctx.font = '12px Inter, sans-serif';
-            ctx.fillText('0% Impact', centerX + Math.cos(startAngle) * (maxRadius + 35), centerY + Math.sin(startAngle) * (maxRadius + 35) + 15);
-            ctx.fillText('100% Impact', centerX + Math.cos(endAngle) * (maxRadius + 35), centerY + Math.sin(endAngle) * (maxRadius + 35) + 15);
-            ctx.globalAlpha = 1;
+            const ov = getOverrideFor(tech);
+            const radarAngle = startRadarAngle + (tech.impact / 100) * arcSpan;
+            const canvasAngle = ((radarAngle % 360) * Math.PI) / 180;
 
-            // Calculate point positions
-            const arcSpan = 240,
-                startRadarAngle = 150;
-            const newPositions: Record<string, { x: number; y: number }> = {};
-            const occupiedLabels: { x: number; y: number; width: number; height: number }[] = [];
+            let labelX: number, labelY: number, lineStartX = x, lineStartY = y;
 
-            const sorted = [...apiTechnologies].sort((a, b) => {
-                const ra = Math.min(a.timeline / 10, 1);
-                const rb = Math.min(b.timeline / 10, 1);
-                if (rb !== ra) return rb - ra;
-                return startRadarAngle + (a.impact / 100) * arcSpan - (startRadarAngle + (b.impact / 100) * arcSpan);
-            });
+            if (ov) {
+                if (ov.mode === 'rel') {
+                    labelX = x + (ov.dx ?? 0);
+                    labelY = y + (ov.dy ?? 0);
+                } else {
+                    labelX = ov.x ?? x;
+                    labelY = ov.y ?? y;
+                }
+                const tm = ctx.measureText(tech.name);
+                const h = 12 * visualScale,
+                    pad = 2 * visualScale;
+                const w = tm.width * visualScale + pad * 2 + 4;
+                const bh = h + 2 + 4;
+                occupiedLabels.push({
+                    x: labelX - (tm.width * visualScale) / 2 - pad,
+                    y: labelY - h / 2 - 1,
+                    width: w,
+                    height: bh,
+                });
+            } else {
+                const placed = placeLabelWithCollision(ctx, x, y, canvasAngle, maxRadius, tech.name, 1, occupiedLabels, !!isHovered, !!isSelected);
+                labelX = placed.labelX;
+                labelY = placed.labelY;
+                lineStartX = placed.lineStartX;
+                lineStartY = placed.lineStartY;
+            }
 
-            sorted.forEach((tech) => {
-                const impactAngle = startRadarAngle + (tech.impact / 100) * arcSpan;
-                const a = ((impactAngle % 360) * Math.PI) / 180;
-                const r = Math.min(tech.timeline / 10, 1) * maxRadius;
-                newPositions[tech.id] = { x: centerX + Math.cos(a) * r, y: centerY + Math.sin(a) * r };
-            });
+            setLabelPositions((prev) => ({ ...prev, [tech.id]: { x: labelX, y: labelY, lineStartX, lineStartY } }));
 
-            // Forbidden halo around points
-            Object.values(newPositions).forEach((p) => {
-                const sz = 28;
-                occupiedLabels.push({ x: p.x - sz / 2, y: p.y - sz / 2, width: sz, height: sz });
-            });
+            ctx.globalAlpha = 0.5;
+            ctx.strokeStyle = isHovered ? '#17A398' : '#B8D4E3';
+            ctx.lineWidth = isHovered ? 2 : 1;
+            ctx.beginPath();
+            ctx.moveTo(lineStartX, lineStartY);
+            ctx.lineTo(labelX, labelY);
+            ctx.stroke();
 
-            setTechPositions(newPositions);
-            labelBoxesRef.current = {};
+            const tm2 = ctx.measureText(tech.name);
+            const textW = tm2.width * visualScale;
+            const textH = 12 * visualScale - 1;
+            const pad2 = 2 * visualScale;
+            const bgAlpha = isSelected ? 0.9 : isHovered ? 0.85 : 0.7;
 
-            // Draw points and labels
-            sorted.forEach((tech) => {
-                const pos = newPositions[tech.id];
-                if (!pos) return;
-                const x = pos.x,
-                    y = pos.y;
-
-                const isSelected = selectedTechnology && String(selectedTechnology.id) === String(tech.id);
-                const isHovered = hoveredTechnology && String(hoveredTechnology.id) === String(tech.id);
-                const visualScale = isSelected ? 1.5 : isHovered ? 1.2 : 1;
-
-                // Point
-                ctx.save();
-                ctx.globalAlpha = isSelected || isHovered ? 1 : 0.9;
+            ctx.globalAlpha = bgAlpha;
+            ctx.fillStyle = '#FFFFFF';
+            if (ctx.roundRect) {
                 ctx.beginPath();
-                ctx.arc(x, y, 6 * visualScale, 0, 2 * Math.PI);
-                ctx.fillStyle = '#FFFFFF';
+                ctx.roundRect(labelX - textW / 2 - pad2, labelY - textH / 2 - 1, textW + pad2 * 2, textH + 2, 4);
                 ctx.fill();
-                ctx.strokeStyle = '#17A398';
-                ctx.lineWidth = 2;
-                ctx.stroke();
+            } else {
+                ctx.fillRect(labelX - textW / 2 - pad2, labelY - textH / 2 - 1, textW + pad2 * 2, textH + 2);
+            }
 
-                // Determine label position: override or auto
-                const ov = getOverrideFor(tech);
-                const radarAngle = startRadarAngle + (tech.impact / 100) * arcSpan;
-                const canvasAngle = ((radarAngle % 360) * Math.PI) / 180;
+            ctx.globalAlpha = 1;
+            ctx.fillStyle = isSelected ? '#17A398' : '#2E2E2E';
+            ctx.font = `${isSelected || isHovered ? 'bold ' : ''}${textH}px Inter, sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(tech.name, labelX, labelY);
 
-                let labelX: number, labelY: number, lineStartX = x, lineStartY = y;
+            labelBoxesRef.current[String(tech.id)] = {
+                x: labelX - textW / 2 - pad2,
+                y: labelY - textH / 2 - 1,
+                w: textW + pad2 * 2,
+                h: textH + 2,
+            };
 
-                if (ov) {
-                    if (ov.mode === 'rel') {
-                        labelX = x + (ov.dx ?? 0);
-                        labelY = y + (ov.dy ?? 0);
-                    } else {
-                        labelX = ov.x ?? x;
-                        labelY = ov.y ?? y;
-                    }
-                    const tm = ctx.measureText(tech.name);
-                    const h = 12 * visualScale,
-                        pad = 2 * visualScale;
-                    const w = tm.width * visualScale + pad * 2 + 4;
-                    const bh = h + 2 + 4;
-                    occupiedLabels.push({
-                        x: labelX - (tm.width * visualScale) / 2 - pad,
-                        y: labelY - h / 2 - 1,
-                        width: w,
-                        height: bh,
-                    });
-                } else {
-                    const placed = placeLabelWithCollision(ctx, x, y, canvasAngle, maxRadius, tech.name, 1, occupiedLabels, !!isHovered, !!isSelected);
-                    labelX = placed.labelX;
-                    labelY = placed.labelY;
-                    lineStartX = placed.lineStartX;
-                    lineStartY = placed.lineStartY;
-                }
-
-                // Cache label position
-                setLabelPositions((prev) => ({ ...prev, [tech.id]: { x: labelX, y: labelY, lineStartX, lineStartY } }));
-
-                // Connection line
-                ctx.globalAlpha = 0.5;
-                ctx.strokeStyle = isHovered ? '#17A398' : '#B8D4E3';
-                ctx.lineWidth = isHovered ? 2 : 1;
-                ctx.beginPath();
-                ctx.moveTo(lineStartX, lineStartY);
-                ctx.lineTo(labelX, labelY);
-                ctx.stroke();
-
-                // Background and text
-                const tm2 = ctx.measureText(tech.name);
-                const textW = tm2.width * visualScale;
-                const textH = 12 * visualScale - 1;
-                const pad2 = 2 * visualScale;
-                const bgAlpha = isSelected ? 0.9 : isHovered ? 0.85 : 0.7;
-
-                ctx.globalAlpha = bgAlpha;
-                ctx.fillStyle = '#FFFFFF';
-                if (ctx.roundRect) {
-                    ctx.beginPath();
-                    ctx.roundRect(labelX - textW / 2 - pad2, labelY - textH / 2 - 1, textW + pad2 * 2, textH + 2, 4);
-                    ctx.fill();
-                } else {
-                    ctx.fillRect(labelX - textW / 2 - pad2, labelY - textH / 2 - 1, textW + pad2 * 2, textH + 2);
-                }
-
-                ctx.globalAlpha = 1;
-                ctx.fillStyle = isSelected ? '#17A398' : '#2E2E2E';
-                ctx.font = `${isSelected || isHovered ? 'bold ' : ''}${textH}px Inter, sans-serif`;
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText(tech.name, labelX, labelY);
-
-                // Store box for hit-test (edit)
-                labelBoxesRef.current[String(tech.id)] = {
-                    x: labelX - textW / 2 - pad2,
-                    y: labelY - textH / 2 - 1,
-                    w: textW + pad2 * 2,
-                    h: textH + 2,
-                };
-
-                // Show red border around label in Edit mode
-                if (editLabelsMode) {
-                    const b = labelBoxesRef.current[String(tech.id)];
-                    ctx.save();
-                    ctx.setLineDash([4, 2]);
-                    ctx.strokeStyle = '#EF4444';
-                    ctx.lineWidth = 1;
-                    ctx.strokeRect(b.x, b.y, b.w, b.h);
-                    ctx.restore();
-                }
-
-                ctx.restore();
-            });
-
-            // Big ribbon at top of canvas when Edit is on
             if (editLabelsMode) {
+                const b = labelBoxesRef.current[String(tech.id)];
                 ctx.save();
-                ctx.resetTransform?.();
-                if (!ctx.resetTransform) {
-                    ctx.setTransform(1, 0, 0, 1, 0, 0);
-                }
-                ctx.globalAlpha = 0.9;
-                ctx.fillStyle = '#10B981';
-                ctx.fillRect(10, 10, 140, 28);
-                ctx.fillStyle = '#fff';
-                ctx.font = 'bold 14px Inter, sans-serif';
-                ctx.fillText('EDIT MODE (drag labels)', 18, 28);
+                ctx.setLineDash([4, 2]);
+                ctx.strokeStyle = '#EF4444';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(b.x, b.y, b.w, b.h);
                 ctx.restore();
             }
 
             ctx.restore();
-        };
+        });
 
-        const renderNeedle = () => {
-            if (!needleEnabled) return;
-            const ctx = canvas.getContext('2d');
-            if (!ctx) return;
+        if (editLabelsMode) {
             ctx.save();
-            ctx.translate(panOffset.x, panOffset.y);
-            ctx.scale(zoomLevel, zoomLevel);
-
-            const centerX = dimensions.width / 2;
-            const centerY = dimensions.height / 2;
-            const maxRadius = Math.min(dimensions.width / 2 - 50, dimensions.height / 2 - 50);
-
-            let n = needleAngle % 360;
-            if (n < 0) n += 360;
-            const inArc = (n >= 150 && n <= 360) || (n >= 0 && n <= 30);
-            if (inArc && trailOpacity > 0) {
-                const a = (n * Math.PI) / 180;
-                const ex = centerX + Math.cos(a) * maxRadius;
-                const ey = centerY + Math.sin(a) * maxRadius;
-                ctx.globalAlpha = 0.5 * trailOpacity;
-                ctx.beginPath();
-                ctx.moveTo(centerX, centerY);
-                ctx.lineTo(ex, ey);
-                ctx.strokeStyle = '#17A398';
-                ctx.lineWidth = 1;
-                ctx.stroke();
-                ctx.globalAlpha = 1;
+            ctx.resetTransform?.();
+            if (!ctx.resetTransform) {
+                ctx.setTransform(1, 0, 0, 1, 0, 0);
             }
+            ctx.globalAlpha = 0.9;
+            ctx.fillStyle = '#10B981';
+            ctx.fillRect(10, 10, 140, 28);
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 14px Inter, sans-serif';
+            ctx.fillText('EDIT MODE (drag labels)', 18, 28);
             ctx.restore();
-        };
+        }
 
-        const frame = () => {
-            renderRadar();
-            renderNeedle();
-            animationRef.current = requestAnimationFrame(frame);
-        };
-        frame();
-
-        return () => animationRef.current && cancelAnimationFrame(animationRef.current);
+        ctx.restore();
     }, [
         dimensions,
         apiTechnologies,
         selectedTechnology,
         hoveredTechnology,
-        needleEnabled,
         zoomLevel,
         panOffset,
-        needleAngle,
-        trailOpacity,
         editLabelsMode,
         localOverrides,
+        backgroundImage,
     ]);
 
+    // تابع رندر نیدل (مستقل روی canvas جدا)
+    const renderNeedle = () => {
+        if (!needleEnabled) return;
+        const ctx = needleCanvasRef.current?.getContext('2d');
+        if (!ctx) return;
+
+        const dpr = window.devicePixelRatio || 1;
+        needleCanvasRef.current.width = dimensions.width * dpr;
+        needleCanvasRef.current.height = dimensions.height * dpr;
+        ctx.scale(dpr, dpr);
+
+        ctx.clearRect(0, 0, dimensions.width, dimensions.height); // فقط نیدل رو پاک می‌کنه
+        ctx.save();
+        ctx.translate(panOffset.x, panOffset.y);
+        ctx.scale(zoomLevel, zoomLevel);
+
+        const centerX = dimensions.width / 2;
+        const centerY = dimensions.height / 2;
+        const maxRadius = Math.min(dimensions.width / 2 - 50, dimensions.height / 2 - 50);
+
+        let needleAngle = needleAngleRef.current;
+        let trailOpacity = trailOpacityRef.current;
+        const inc = 0.5;
+        let next = needleAngle + inc;
+        let n = next % 360;
+        if (n < 0) n += 360;
+        const inArc = (n >= 150 && n <= 360) || (n >= 0 && n <= 30);
+        if (next >= 390 || !inArc) {
+            trailOpacityRef.current = 0;
+            setTimeout(() => {
+                trailOpacityRef.current = 1;
+                needleAngleRef.current = 150;
+            }, 200);
+            needleAngleRef.current = 150;
+        } else {
+            if (next >= 360) next -= 360;
+            needleAngleRef.current = next;
+        }
+
+        if (inArc && trailOpacity > 0) {
+            const a = (n * Math.PI) / 180;
+            const ex = centerX + Math.cos(a) * maxRadius;
+            const ey = centerY + Math.sin(a) * maxRadius;
+            ctx.globalAlpha = 0.5 * trailOpacity;
+            ctx.beginPath();
+            ctx.moveTo(centerX, centerY);
+            ctx.lineTo(ex, ey);
+            ctx.strokeStyle = '#17A398';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+            ctx.globalAlpha = 1;
+        }
+        ctx.restore();
+    };
+
+    // loop مستقل برای نیدل (بدون وابستگی به رادار)
+    useEffect(() => {
+        if (!needleEnabled || modalTech) {
+            if (animationRef.current) cancelAnimationFrame(animationRef.current);
+            return;
+        }
+
+        const frame = () => {
+            renderNeedle();
+            animationRef.current = requestAnimationFrame(frame);
+        };
+
+        animationRef.current = requestAnimationFrame(frame);
+
+        return () => {
+            if (animationRef.current) cancelAnimationFrame(animationRef.current);
+        };
+    }, [needleEnabled, modalTech, dimensions, zoomLevel, panOffset]); // وابستگی‌های نیدل
+
     const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
-        if (editLabelsMode) return;
-        if (!canvasRef.current) return;
+        if (editLabelsMode || !canvasRef.current) return;
         const rect = canvasRef.current.getBoundingClientRect();
         const x = (e.clientX - rect.left - panOffset.x) / zoomLevel;
         const y = (e.clientY - rect.top - panOffset.y) / zoomLevel;
@@ -835,7 +793,6 @@ export function RadarChart({
         });
         onTechnologyClick(clicked || null);
         setModalTech(clicked || null);
-        e.stopPropagation();
     };
 
     const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -857,7 +814,8 @@ export function RadarChart({
 
         if (e.button === 0) {
             setIsPanning(true);
-            setDragStart({ x: e.clientX - panOffset.x, y: e.clientY - panOffset.y });
+            setDragStart({ x: e.clientX, y: e.clientY }); // اصلاح: فقط موقعیت موس رو ذخیره می‌کنم، نه panOffset
+            canvasRef.current.style.cursor = 'grabbing';
         }
     };
 
@@ -869,7 +827,7 @@ export function RadarChart({
 
         if (editLabelsMode) {
             if (draggingLabelRef.current) {
-                const id = draggingLabelRef.current;
+                const id = draggingLabelRef.current.id;
                 const point = techPositions[id];
                 if (point) {
                     const dx = Math.round(worldX - point.x);
@@ -885,23 +843,23 @@ export function RadarChart({
         }
 
         if (isPanning && onPanChange) {
-            const newPan = { x: e.clientX - dragStart.x, y: e.clientY - dragStart.y };
-            setPanOffset(newPan);
-            onPanChange(newPan);
+            const newPanX = panOffset.x + (e.clientX - dragStart.x);
+            const newPanY = panOffset.y + (e.clientY - dragStart.y);
+            setPanOffset({ x: newPanX, y: newPanY }); // اصلاح: panOffset فعلی + تفاوت موس
+            onPanChange({ x: newPanX, y: newPanY });
+            return; // جلوگیری از چک hover موقع pan
         } else {
-            const hovered = Object.entries(techPositions).find(([, p]) => Math.hypot(worldX - (p as any).x, worldY - (p as any).y) <= 20 / zoomLevel);
+            const hovered = Object.entries(techPositions).find(([, p]) => Math.hypot(worldX - p.x, worldY - p.y) <= 20 / zoomLevel);
             onTechnologyHover(hovered ? apiTechnologies.find((t) => String(t.id) === hovered[0]) || null : null);
-            canvasRef.current.style.cursor = hovered ? 'pointer' : isPanning ? 'grabbing' : 'grab';
+            canvasRef.current.style.cursor = hovered ? 'pointer' : 'grab'; // اصلاح: default به grab (برای نشان دادن امکان drag)
         }
     };
 
     const handleMouseUp = () => {
         setIsPanning(false);
         draggingLabelRef.current = null;
-        if (canvasRef.current) canvasRef.current.style.cursor = editLabelsMode ? 'move' : 'default';
+        if (canvasRef.current) canvasRef.current.style.cursor = editLabelsMode ? 'move' : 'grab'; // اصلاح: بعد از up، به grab برگرد
     };
-
-    const handleMouseEnter = () => {};
 
     const handleMouseLeave = () => {
         onTechnologyHover(null);
@@ -918,76 +876,45 @@ export function RadarChart({
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [modalTech]);
+    }, [modalTech, onTechnologyClick]);
 
     const Modal = ({ tech, onClose }: { tech: Technology; onClose: () => void }) => (
-        <div className="fixed inset-0 z-[999999]" style={{ pointerEvents: 'auto', userSelect: 'none' }}>
+        <div className="fixed inset-0 z-[999999]" style={{ pointerEvents: 'auto' }}>
             <div
                 className="fixed inset-0 bg-black/50 backdrop-blur-[2px] z-[999999]"
-                onClick={(e) => {
-                    e.stopPropagation();
-                    e.preventDefault();
-                    if (e.target === e.currentTarget) onClose();
-                }}
+                onClick={onClose}
             />
             <div
                 className="fixed bg-white/95 p-6 rounded-lg max-w-md w-full mx-4 max-h-[80vh] overflow-y-auto z-[1000000]"
                 style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)', pointerEvents: 'auto' }}
-                onClick={(e) => e.stopPropagation()}
             >
                 <div className="flex justify-between items-center mb-4">
                     <h2 className="text-xl font-bold text-gray-800">{tech.name}</h2>
                     <button
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            e.preventDefault();
-                            onClose();
-                        }}
+                        onClick={onClose}
                         className="text-gray-500 hover:text-gray-700 text-2xl focus:outline-none focus:ring-2 focus:ring-gray-500"
-                        style={{ pointerEvents: 'auto' }}
                         aria-label="Close modal"
                     >
                         &times;
                     </button>
                 </div>
                 <div className="space-y-2 text-sm text-gray-700">
-                    <p>
-                        <strong>Sector:</strong> {tech.sector}
-                    </p>
-                    <p>
-                        <strong>Trend Cluster:</strong> {tech.trendCluster}
-                    </p>
-                    <p>
-                        <strong>Focus Area:</strong> {tech.focusArea}
-                    </p>
-                    <p>
-                        <strong>Impact:</strong> {tech.impact}%
-                    </p>
-                    <p>
-                        <strong>Timeline:</strong> {tech.timeline} years
-                    </p>
-                    <p>
-                        <strong>Department:</strong> {tech.department}
-                    </p>
-                    <p>
-                        <strong>Supply Chain Stage:</strong> {tech.supplyChainStage}
-                    </p>
-                    <p>
-                        <strong>Trade Channel Type:</strong> {tech.tradeChannelType}
-                    </p>
-                    <p>
-                        <strong>Industry:</strong> {tech.industry}
-                    </p>
-                    <p className="mt-4">
-                        <strong>Description:</strong> {tech.description}
-                    </p>
+                    <p><strong>Sector:</strong> {tech.sector}</p>
+                    <p><strong>Trend Cluster:</strong> {tech.trendCluster}</p>
+                    <p><strong>Focus Area:</strong> {tech.focusArea}</p>
+                    <p><strong>Impact:</strong> {tech.impact}%</p>
+                    <p><strong>Timeline:</strong> {tech.timeline} years</p>
+                    <p><strong>Department:</strong> {tech.department}</p>
+                    <p><strong>Supply Chain Stage:</strong> {tech.supplyChainStage}</p>
+                    <p><strong>Trade Channel Type:</strong> {tech.tradeChannelType}</p>
+                    <p><strong>Industry:</strong> {tech.industry}</p>
+                    <p className="mt-4"><strong>Description:</strong> {tech.description}</p>
                 </div>
             </div>
         </div>
     );
 
-    // Loading spinner component
-    const LoadingSpinner = () => (<Loading/>);
+    const LoadingSpinner = () => <Loading />;
 
     return (
         <div ref={containerRef} className="w-full min-h-[calc(100vh-80px)] flex flex-col items-center justify-center rounded-lg relative overflow-hidden">
@@ -998,7 +925,7 @@ export function RadarChart({
             ) : (
                 <>
                     <div className="flex items-center justify-between gap-4 lg:mt-8 mt-20 transition-all">
-                        <div className="absolute top-40 lg:left-10">
+                        <div className="absolute top-40 lg:left-10 z-10"> {/* اصلاح: z-10 برای بالاتر بودن از canvas */}
                             <AccordionMenu items={menuItems} onSelectionChange={handleSelectionChange} selectedKeys={selectedKeys} />
                         </div>
                         <div className="flex flex-col items-start justify-center lg:text-[14px] text-[12px] bg-gray-50 p-3 lg:min-w-68 border border-black/10 rounded-md">
@@ -1015,17 +942,23 @@ export function RadarChart({
                         </div>
                     </div>
 
-                    <canvas
-                        ref={canvasRef}
-                        onClick={handleCanvasClick}
-                        onMouseMove={handleMouseMove}
-                        onMouseEnter={handleMouseEnter}
-                        onMouseLeave={handleMouseLeave}
-                        onMouseDown={handleMouseDown}
-                        onMouseUp={handleMouseUp}
-                        className="w-full h-full transition-all"
-                        style={{ width: dimensions.width, height: dimensions.height }}
-                    />
+                    <div className="relative w-full h-full">
+                        <canvas
+                            ref={canvasRef}
+                            onClick={handleCanvasClick}
+                            onMouseMove={handleMouseMove}
+                            onMouseLeave={handleMouseLeave}
+                            onMouseDown={handleMouseDown}
+                            onMouseUp={handleMouseUp}
+                            className="w-full h-full transition-all"
+                            style={{ width: dimensions.width, height: dimensions.height, pointerEvents: modalTech ? 'none' : 'auto' }}
+                        />
+                        <canvas
+                            ref={needleCanvasRef}
+                            className="absolute top-0 left-0 w-full h-full"
+                            style={{ width: dimensions.width, height: dimensions.height, pointerEvents: 'none' }} // نیدل رویداد موس نمی‌گیره
+                        />
+                    </div>
 
                     <div className="absolute bottom-36 left-1/2 transform -translate-x-1/2">
                         <p className="text-xs text-[#2E2E2E]/60 text-center">
